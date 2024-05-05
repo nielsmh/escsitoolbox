@@ -14,7 +14,7 @@ struct ToolboxFileEntry {
  */
 #define TOOLBOX_LIST_FILES     0xD0
 
-/** TOOLBOX_GET_FILE
+/** TOOLBOX_GET_FILE (read)
  * Input:
  *  CDB 00 = command byte
  *  CDB 01 = file index byte
@@ -30,7 +30,7 @@ struct ToolboxFileEntry {
  */
 #define TOOLBOX_GET_FILE       0xD1
 
-/** TOOLBOX_COUNT_FILES
+/** TOOLBOX_COUNT_FILES (read)
  * Input:
  *  CDB 00 = command byte
  * Output:
@@ -38,7 +38,7 @@ struct ToolboxFileEntry {
  */
 #define TOOLBOX_COUNT_FILES    0xD2
 
-/** TOOLBOX_SEND_FILE_PREP
+/** TOOLBOX_SEND_FILE_PREP (write)
  * Input:
  *  CDB 00 = command byte
  *  Data 00 = 32 byte filename to create
@@ -55,7 +55,7 @@ struct ToolboxFileEntry {
  */
 #define TOOLBOX_SEND_FILE_PREP 0xD3
 
-/** TOOLBOX_SEND_FILE_10
+/** TOOLBOX_SEND_FILE_10 (write)
  * Input:
  *  CDB 00 = command byte
  *  CDB 01 = 16 bit data size (min 1, max 512)
@@ -63,12 +63,13 @@ struct ToolboxFileEntry {
  *  CDB 03 = 24 bit block index to write to
  *      04 | Big endian
  *      05 | Blocks are 512 bytes
+ *  Data   = up to 512 bytes of data (as per CDB 01-02)
  * Output:
  *  None.
  */
 #define TOOLBOX_SEND_FILE_10   0xD4
 
-/** TOOLBOX_SEND_FILE_END
+/** TOOLBOX_SEND_FILE_END (write)
  * Input:
  *  CDB 00 = command byte
  * Output:
@@ -76,7 +77,7 @@ struct ToolboxFileEntry {
  */
 #define TOOLBOX_SEND_FILE_END  0xD5
 
-/** TOOLBOX_TOGGLE_DEBUG
+/** TOOLBOX_TOGGLE_DEBUG (read)
  * Input:
  *  CDB 00 = command byte
  *  CDB 01 = if byte 0, set debug state
@@ -88,7 +89,7 @@ struct ToolboxFileEntry {
  */
 #define TOOLBOX_TOGGLE_DEBUG   0xD6
 
-/** TOOLBOX_LIST_CDS
+/** TOOLBOX_LIST_CDS (read)
  * Input:
  *  CDB 00 = command byte
  * Output:
@@ -96,7 +97,7 @@ struct ToolboxFileEntry {
  */
 #define TOOLBOX_LIST_CDS       0xD7
 
-/** TOOLBOX_SET_NEXT_CD
+/** TOOLBOX_SET_NEXT_CD (read)
  * Input:
  *  CDB 00 = command byte
  *  CDB 01 = image file index byte to change to
@@ -105,7 +106,7 @@ struct ToolboxFileEntry {
  */
 #define TOOLBOX_SET_NEXT_CD    0xD8
 
-/** TOOLBOX_LIST_DEVICES
+/** TOOLBOX_LIST_DEVICES (read)
  * Input:
  *  CDB 00 = command byte
  * Output:
@@ -114,7 +115,7 @@ struct ToolboxFileEntry {
  */
 #define TOOLBOX_LIST_DEVICES   0xD9
 
-/** TOOLBOX_COUNT_CDS
+/** TOOLBOX_COUNT_CDS (read)
  * Input:
  *  CDB 00 = command byte
  * Output:

@@ -11,7 +11,8 @@ C:\DEV\ESTBOX\tbdos.obj : C:\DEV\ESTBOX\DOS\tbdos.c .AUTODEPEND
  *wcc DOS\tbdos.c -i="C:\WATCOM/h" -w4 -e25 -zq -od -d2 -bt=dos -fo=.obj -ml
 
 C:\DEV\ESTBOX\ESTBDOS.exe : C:\DEV\ESTBOX\aspiintf.obj C:\DEV\ESTBOX\tbdos.o&
-bj .AUTODEPEND
+bj C:\DEV\ESTBOX\INCLUDE\aspi.h C:\DEV\ESTBOX\INCLUDE\scsidefs.h C:\DEV\ESTB&
+OX\INCLUDE\toolbox.h .AUTODEPEND
  @C:
  cd C:\DEV\ESTBOX
  @%write ESTBDOS.lk1 FIL aspiintf.obj,tbdos.obj

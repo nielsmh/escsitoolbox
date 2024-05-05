@@ -6,7 +6,7 @@ VpeMain
 WRect
 0
 0
-10168
+10160
 10240
 2
 MProject
@@ -32,10 +32,10 @@ WVList
 VComponent
 9
 WRect
-231
-225
-5697
-4325
+222
+213
+5688
+4314
 0
 0
 10
@@ -48,10 +48,10 @@ ESTBW16.tgt
 VComponent
 12
 WRect
-471
-462
-5697
-4325
+1591
+888
+5688
+4314
 0
 0
 13
@@ -59,5 +59,5 @@ WFileName
 11
 ESTBDOS.tgt
 0
-2
+4
 11

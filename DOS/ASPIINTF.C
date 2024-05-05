@@ -27,6 +27,7 @@ static void Spinner(void) {
 
 
 static clock_t WAITSTEP = CLOCKS_PER_SEC / 4;
+static int TIMEOUT = 40;
 static int WaitForASPI(BYTE *status)
 {
     int counter = 0;
@@ -40,7 +41,7 @@ static int WaitForASPI(BYTE *status)
             counter++;
             timeout = t + WAITSTEP;
         }
-        if (counter > 40) break;
+        if (counter > TIMEOUT) break;
     }
 
     return *status;
@@ -110,4 +111,18 @@ const char *GetDeviceTypeName(int device_type)
             return "Unknown";
     }
 }
+
+void PrintSense(BYTE far *sense)
+{
+    SENSE_DATA_FMT s;
+    memcpy(&s, sense, sizeof(s));
+    printf("SENSE: err=%02x seg=%02x key=%02x info=%02x%02x%02x%02x addlen=%02x\n",
+        s.ErrorCode, s.SegmentNum, s.SenseKey,
+        s.InfoByte0, s.InfoByte1, s.InfoByte2, s.InfoByte3,
+        s.AddSenLen);
+    printf("       cominf=%02x%02x%02x%02x addcode=%02x addqual=%02x frepuc=%02x\n",
+        s.ComSpecInf0, s.ComSpecInf1, s.ComSpecInf2, s.ComSpecInf3,
+        s.AddSenseCode, s.AddSenQual, s.FieldRepUCode);
+}
+
 

@@ -11,6 +11,8 @@
 #ifndef __ASPI_H_
 #define __ASPI_H_
 
+#pragma pack(push, 1)
+
 typedef unsigned char BYTE;
 typedef unsigned short int WORD;
 typedef unsigned long int DWORD;
@@ -189,8 +191,8 @@ typedef struct                                  // Offset Structure for 10-byte 
     BYTE        SRB_TargStat;                   // 19/025 Target Status
     VOID        FAR *SRB_PostProc;              // 1A/026 Post routine
     BYTE        SRB_Rsvd2[34];                  // 1E/030 Reserved, MUST = 0
-    BYTE        CDBByte[6];                     // 40/064 SCSI CDB
-    BYTE        SenseArea10[SENSE_LEN];         // 50/070 Request Sense buffer
+    BYTE        CDBByte[10];                    // 40/064 SCSI CDB
+    BYTE        SenseArea10[SENSE_LEN];         // 4A/074 Request Sense buffer
 }
 SRB_ExecSCSICmd10, *PSRB_ExecSCSICmd10, FAR *LPSRB_ExecSCSICmd10;
 
@@ -260,6 +262,10 @@ int InitASPI(void);
 
 const char *GetDeviceTypeName(int device_type);
 
+void PrintSense(BYTE far *sense);
+
+
+#pragma pack(pop)
 
 #ifdef __cplusplus
 }
