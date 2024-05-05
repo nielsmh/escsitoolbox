@@ -16,8 +16,15 @@ struct Adapter {
     unsigned long max_transfer_length;
 };
 
+struct Device {
+    char name[6];
+    int devtype;
+};
+
 unsigned char _num_adapters = 0;
+unsigned char _num_devices = 0;
 struct Adapter *_adapters = NULL;
+struct Device *_devices = NULL;
 
 int GetHostAdapterInfo(void)
 {
@@ -44,6 +51,7 @@ int GetHostAdapterInfo(void)
         _num_adapters = host_adapter_info.HA_Count;
         if (_adapters == NULL) {
             _adapters = calloc(_num_adapters, sizeof(struct Adapter));
+            _devices = calloc(MAX_SCSI_LUNS * _num_adapters, sizeof(struct Device));
         }
 
         /* fill Adapter struct */
@@ -124,26 +132,34 @@ int GetAdapterDeviceInfo(int adapter_id)
     int r;
     int device_id, lun;
     int devtype = -1;
-    int num_devices = 0;
+
+    _num_devices = 0;
 
     for (device_id = 0; device_id < _adapters[adapter_id].max_targets; device_id++) {
         for (lun = 0; lun <= MAXLUN; lun++) {
             r = QueryDevice(adapter_id, device_id, lun, &devtype);
             if (r < 0) return 0;
             if (r == 0) continue;
-        
-            num_devices++;
-            printf(" * %d:%d:%d type %d (%s)\n",
+
+            sprintf(_devices[_num_devices].name,
+                "%d:%d:%d",
                 adapter_id,
                 device_id,
-                lun,
-                devtype,
-                GetDeviceTypeName(devtype)
+                lun
                 );
+            _devices[_num_devices].devtype = devtype;
+            
+            printf(" * %s type %d (%s)\n",
+                _devices[_num_devices].name,
+                _devices[_num_devices].devtype,
+                GetDeviceTypeName(_devices[_num_devices].devtype)
+                );
+
+            _num_devices++;
         }
     }
-    
-    return num_devices;
+   
+    return _num_devices;
 }
 
 
