@@ -1,0 +1,20 @@
+!define BLANK ""
+C:\DEV\ESTBOX\aspiintf.obj : C:\DEV\ESTBOX\DOS\aspiintf.c .AUTODEPEND
+ @C:
+ cd C:\DEV\ESTBOX
+ *wcc DOS\aspiintf.c -i="C:\WATCOM/h" -w4 -e25 -zq -od -d2 -bt=dos -fo=.obj &
+-ml
+
+C:\DEV\ESTBOX\tbdos.obj : C:\DEV\ESTBOX\DOS\tbdos.c .AUTODEPEND
+ @C:
+ cd C:\DEV\ESTBOX
+ *wcc DOS\tbdos.c -i="C:\WATCOM/h" -w4 -e25 -zq -od -d2 -bt=dos -fo=.obj -ml
+
+C:\DEV\ESTBOX\ESTBDOS.exe : C:\DEV\ESTBOX\aspiintf.obj C:\DEV\ESTBOX\tbdos.o&
+bj .AUTODEPEND
+ @C:
+ cd C:\DEV\ESTBOX
+ @%write ESTBDOS.lk1 FIL aspiintf.obj,tbdos.obj
+ @%append ESTBDOS.lk1 
+ *wlink name ESTBDOS d all sys dos op m op maxe=25 op q op symf @ESTBDOS.lk1
+

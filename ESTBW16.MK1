@@ -1,0 +1,18 @@
+!define BLANK ""
+C:\DEV\ESTBOX\ESTBW16.exe : .AUTODEPEND
+ @C:
+ cd C:\DEV\ESTBOX
+ @%write ESTBW16.lk1 
+ @%append ESTBW16.lk1 
+!ifneq BLANK ""
+ *wlib -q -n -b ESTBW16.imp 
+ @%append ESTBW16.lk1 LIBR ESTBW16.imp
+!endif
+!ifneq BLANK ""
+ @%append ESTBW16.lk1 op resource=
+!endif
+ *wlink name ESTBW16 d all sys windows op m op maxe=25 op q op symf @ESTBW16&
+.lk1
+!ifneq BLANK ""
+!endif
+
