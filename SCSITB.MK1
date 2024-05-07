@@ -10,12 +10,12 @@ C:\DEV\ESTBOX\tbdos.obj : C:\DEV\ESTBOX\DOS\tbdos.c .AUTODEPEND
  cd C:\DEV\ESTBOX
  *wcc DOS\tbdos.c -i="C:\WATCOM/h" -w4 -e25 -zq -od -d2 -bt=dos -fo=.obj -ml
 
-C:\DEV\ESTBOX\ESTBDOS.exe : C:\DEV\ESTBOX\aspiintf.obj C:\DEV\ESTBOX\tbdos.o&
-bj C:\DEV\ESTBOX\INCLUDE\aspi.h C:\DEV\ESTBOX\INCLUDE\scsidefs.h C:\DEV\ESTB&
-OX\INCLUDE\toolbox.h .AUTODEPEND
+C:\DEV\ESTBOX\SCSITB.exe : C:\DEV\ESTBOX\aspiintf.obj C:\DEV\ESTBOX\tbdos.ob&
+j C:\DEV\ESTBOX\INCLUDE\aspi.h C:\DEV\ESTBOX\INCLUDE\scsidefs.h C:\DEV\ESTBO&
+X\INCLUDE\toolbox.h .AUTODEPEND
  @C:
  cd C:\DEV\ESTBOX
- @%write ESTBDOS.lk1 FIL aspiintf.obj,tbdos.obj
- @%append ESTBDOS.lk1 
- *wlink name ESTBDOS d all sys dos op m op maxe=25 op q op symf @ESTBDOS.lk1
+ @%write SCSITB.lk1 FIL aspiintf.obj,tbdos.obj
+ @%append SCSITB.lk1 
+ *wlink name SCSITB d all sys dos op m op maxe=25 op q op symf @SCSITB.lk1
 

@@ -45,6 +45,14 @@ struct Device {
     unsigned char lun;
 };
 
+struct DeviceInquiryResult {
+    char vendor[20];
+    char product[20];
+    char rev[8];
+    char vinfo[24];
+};
+
+
 unsigned char _num_adapters = 0;
 unsigned char _num_devices = 0;
 struct Adapter *_adapters = NULL;
@@ -103,6 +111,7 @@ int GetHostAdapterInfo(void)
         if (ad->max_targets == 0) ad->max_targets = 8;
         if (ad->max_transfer_length == 0) ad->max_transfer_length = 0x4000; /* 16k */
 
+#if 0
         printf("Adapter %d (SCSI ID #%d): %s  [%s]\n",
             adapter_id,
             ad->scsi_id,
@@ -115,6 +124,7 @@ int GetHostAdapterInfo(void)
             ad->max_targets,
             ad->max_transfer_length
             );
+#endif
     } while (++adapter_id < _num_adapters);
 
     return _num_adapters;
@@ -156,8 +166,7 @@ int GetAdapterDeviceInfo(int adapter_id)
     int r;
     int target_id, lun;
     int devtype = -1;
-
-    _num_devices = 0;
+    int devsonadapter = 0;
 
     for (target_id = 0; target_id < _adapters[adapter_id].max_targets; target_id++) {
         for (lun = 0; lun <= MAXLUN; lun++) {
@@ -177,10 +186,11 @@ int GetAdapterDeviceInfo(int adapter_id)
             _devices[_num_devices].lun = lun;
             
             _num_devices++;
+            devsonadapter++;
         }
     }
    
-    return _num_devices;
+    return devsonadapter;
 }
 
 
@@ -196,17 +206,10 @@ static struct Device * GetDeviceByName(const char *devname)
 }
 
 
-static PSRB_ExecSCSICmd6 PrepareCmd6(const char *devname, unsigned char flags)
+static PSRB_ExecSCSICmd6 PrepareCmd6(struct Device *dev, unsigned char flags)
 {
     static unsigned char databuf[128];
     static SRB_ExecSCSICmd6 cmd;
-    struct Device *dev;
-
-    dev = GetDeviceByName(devname);
-    if (dev == NULL) {
-        fprintf(stderr, "Device %s not found\n", devname);
-        return NULL;
-    }
 
     memset(&cmd, 0, sizeof(cmd));
     cmd.SRB_Cmd = SC_EXEC_SCSI_CMD;
@@ -235,12 +238,12 @@ static PSRB_ExecSCSICmd6 PrepareCmd6(const char *devname, unsigned char flags)
     return &cmd;
 }
 
-int ToolboxGetNumCD(const char *devname)
+int ToolboxGetNumCD(struct Device *dev)
 {
     PSRB_ExecSCSICmd6 cmd;
     unsigned char count;
 
-    cmd = PrepareCmd6(devname, SRB_DIR_IN | SRB_DIR_SCSI);
+    cmd = PrepareCmd6(dev, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return 0;
     
     cmd->CDBByte[0] = TOOLBOX_COUNT_CDS;
@@ -250,35 +253,34 @@ int ToolboxGetNumCD(const char *devname)
         case SS_COMP:
             break;
         case SS_PENDING:
-            fprintf(stderr, "Timeout waiting for TOOLBOX_COUNT_CDS");
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_COUNT_CDS", dev->name);
             return 0;
         default:
-            fprintf(stderr, "Return from SCSI command TOOLBOX_COUNT_CDS was %d, %d, %d\n",
-                cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
+            fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_COUNT_CDS was %d, %d, %d\n",
+                dev->name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
             PrintSense(cmd->SenseArea6);
             return 0;
     }
 
     count = cmd->SRB_BufPointer[0];
-    printf("Device %s has %d CD images\n", devname, count);
     return count;
 }
 
 
-int DeviceInquiry(const char *devname)
+int DeviceInquiry(struct Device *dev, struct DeviceInquiryResult *res)
 {
     PSRB_ExecSCSICmd6 cmd;
-    unsigned char count;
-    char vendor[20] = {0}, product[20] = {0}, rev[8] = {0}, vinfo[24] = {0};
 
-    cmd = PrepareCmd6(devname, SRB_DIR_IN | SRB_DIR_SCSI);
+    memset(res, 0, sizeof(*res));
+
+    cmd = PrepareCmd6(dev, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return 0;
     
     cmd->CDBByte[0] = SCSI_INQUIRY;
     cmd->CDBByte[1] = 0;
     cmd->CDBByte[2] = 0;
     cmd->CDBByte[3] = 0;
-    cmd->CDBByte[4] = 32;
+    cmd->CDBByte[4] = 56;
     cmd->CDBByte[5] = 0;
 
     SendASPICommand(cmd);
@@ -286,53 +288,202 @@ int DeviceInquiry(const char *devname)
         case SS_COMP:
             break;
         case SS_PENDING:
-            fprintf(stderr, "Timeout waiting for SCSI_INQUIRY");
+            fprintf(stderr, "[%s] Timeout waiting for SCSI_INQUIRY", dev->name);
             return 0;
         default:
-            fprintf(stderr, "Return from SCSI command SCSI_INQUIRY was %d, %d, %d\n",
-                cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
+            fprintf(stderr, "[%s] Return from SCSI command SCSI_INQUIRY was %d, %d, %d\n",
+                dev->name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
             return 0;
     }
 
-    strncpy(vendor, cmd->SRB_BufPointer+8, 16);
-    strncpy(product, cmd->SRB_BufPointer+16, 16);
-    strncpy(rev, cmd->SRB_BufPointer+32, 4);
-    strncpy(vinfo, cmd->SRB_BufPointer+36, 20);
-    printf("      %s %s %s %s\n", vendor, product, rev, vinfo);
+    strncpy(res->vendor, cmd->SRB_BufPointer+8, 16);
+    strncpy(res->product, cmd->SRB_BufPointer+16, 16);
+    strncpy(res->rev, cmd->SRB_BufPointer+32, 4);
+    strncpy(res->vinfo, cmd->SRB_BufPointer+36, 20);
+
+    return 1;
 }
 
 
-int main()
+static int InitSCSI()
 {
     int id;
     
     if (!InitASPI()) {
-        fprintf(stderr, "Failed obtaining ASPI services, check your driver is installed\n");
+        fprintf(stderr, "Could not obtain ASPI services, check your driver is installed.\n");
         return 255;
     }
 
     if (GetHostAdapterInfo() == 0) {
-        printf("No SCSI host adapters found\n");
-        return 16;
+        fprintf(stderr, "No SCSI host adapters found.\n");
+        return 254;
     }
 
     for (id = 0; id < _num_adapters; id++) {
         GetAdapterDeviceInfo(id);
     }
 
-    for (id = 0; id < _num_devices; id++) {
-        printf(" * %s type %d (%s)\n",
-            _devices[id].name,
-            _devices[id].devtype,
-            GetDeviceTypeName(_devices[id].devtype)
-            );
-        DeviceInquiry(_devices[id].name);
-        if (_devices[id].devtype == DTYPE_CDROM) {
-            ToolboxGetNumCD(_devices[id].name);
+    if (_num_devices == 0) {
+        fprintf(stderr, "No devices found on any SCSI host adapter.\n");
+        return 253;
+    }    
+
+    return 0;
+}
+
+
+static int DoDeviceInfo(int argc, const char *argv[])
+{
+    int r = InitSCSI();
+    int dev_id;
+    int errors = 0;
+    struct DeviceInquiryResult di;
+
+    if (r) return r;
+
+    printf(
+        "Name   Type       Manufacturer         Model                Adapter           \n"
+        "------------------------------------------------------------------------------\n"
+    );
+
+    for (dev_id = 0; dev_id < _num_devices; dev_id++) {
+        r = DeviceInquiry(&_devices[dev_id], &di);
+        if (r) {
+            errors++;
         }
+        printf("%-6s %-10s %-20s %-20s %-18s\n",
+            _devices[dev_id].name,
+            GetDeviceTypeName(_devices[dev_id].devtype),
+            di.vendor,
+            di.product,
+            _adapters[_devices[dev_id].adapter_id].adapter_id
+            );
     }
     
     return 0;
+}
+
+
+static int DoListImages(int argc, const char *argv[])
+{
+    int r = InitSCSI();
+    struct Device *dev;
+
+    if (r) return r;
+
+    dev = GetDeviceByName(argv[0]);
+    if (!dev) {
+        fprintf(stderr, "Device ID not found: %s\n", argv[0]);
+        return 16;
+    }
+    
+    printf("Device %s type %d (%s)\n", dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
+    ToolboxGetNumCD(dev);
+        
+    return 0;
+}
+
+
+static int DoSetImage(int argc, const char *argv[])
+{
+    printf("The 'setimg' command is not implemented yet. Sorry...\n");
+    return 2;
+}
+
+
+static void PrintBanner(void)
+{
+    printf(
+        "Toolbox for Emulated SCSI devices\n"
+        "Copyright 2024 Niels Martin Hansen\n"
+        "\n"
+    );
+}
+
+static void PrintLicense(void)
+{
+    printf(
+        "This program is free software, and you are welcome to redistribute it\n"
+        "under certain conditions. This program comes with ABSOLUTELY NO WARRANTY.\n"
+        "See the included COPYING file for details on the license.\n"
+        "\n"
+    );
+}
+
+
+static void PrintHelp(void)
+{
+    printf(
+        "Usage:  SCSITB <command> [parameters]\n"
+        "\n"
+        "Commands:\n"
+        "  help\n"
+        "                    Show this help message.\n"
+        "  info\n"
+        "                    List all available SCSI adapters and devices.\n"
+        "  lsimg <device>\n"
+        "                    List available images for the given device.\n"
+        "  setimg <device> <index>\n"
+        "                    Change the mounted image in the given device to the\n"
+        "                    image with the given index in the image list.\n"
+        "\n"
+        "Please see the documentation for more information about supported\n"
+        "devices, how to configure your device for compatibility, etc.\n"
+        "    Project:  https://github.com/nielsmh/escsitoolbox\n"
+    );
+}
+
+
+int main(int argc, const char *argv[])
+{
+    int missingargs = 0;
+
+    if (argc < 2) {
+        PrintBanner();
+        PrintHelp();
+        return 1;
+    }
+
+    if (strcmpi(argv[1], "help") == 0 || strcmpi(argv[1], "h") == 0 ||
+        strcmpi(argv[1], "-h") == 0 || strcmpi(argv[1], "-?") == 0 ||
+        strcmpi(argv[1], "-help") == 0 || strcmpi(argv[1], "--help") == 0 ||
+        strcmpi(argv[1], "/h") == 0 || strcmpi(argv[1], "/?") == 0) {
+        /* So many ways to ask for help. Don't let the user down. */
+        PrintBanner();
+        PrintLicense();
+        PrintHelp();
+        return 0;
+    }
+
+    if (strcmpi(argv[1], "info") == 0) {
+        return DoDeviceInfo(argc - 2, argv + 2);
+    }
+
+    if (strcmpi(argv[1], "lsimg") == 0) {
+        if (argc >= 3) {
+            return DoListImages(argc - 2, argv + 2);
+        } else {
+            missingargs = 1;
+        }
+    }
+
+    if (strcmpi(argv[1], "setimg") == 0) {
+        if (argc >= 4) {
+            return DoSetImage(argc - 2, argv + 2);
+        } else {
+            missingargs = 2;
+        }
+    }
+
+    if (missingargs) {
+        fprintf(stderr, "Missing parameters to command: %s\n\n", argv[1]);
+        PrintHelp();
+        return 1;
+    } else {
+        fprintf(stderr, "Unknown command: %s\n\n", argv[1]);
+        PrintHelp();
+        return 1;
+    }
 }
 
 

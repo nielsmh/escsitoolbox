@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <share.h>
 #include <time.h>
+#include <string.h>
 
 #include "../include/aspi.h"
 #include "../include/scsidefs.h"
@@ -69,7 +70,8 @@ static int WaitForASPI(BYTE *status)
 unsigned short far SendASPICommand(void far *pSrb)
 {
     PSRB_Header header = pSrb;
-    unsigned short r = aspiproc(pSrb);
+
+    aspiproc(pSrb);
 
     return WaitForASPI(&header->SRB_Status);
 }
@@ -105,6 +107,8 @@ int InitASPI(void)
 
 const char *GetDeviceTypeName(int device_type)
 {
+    static char unknown_buffer[10];
+    
     switch (device_type) {
         case DTYPE_DASD:
             return "Disk";
@@ -115,19 +119,20 @@ const char *GetDeviceTypeName(int device_type)
         case DTYPE_PROC:
             return "Processor";
         case DTYPE_WORM:
-            return "WORM memory";
+            return "WORM";
         case DTYPE_CDROM:
             return "CD-ROM";
         case DTYPE_SCAN:
             return "Scanner";
         case DTYPE_OPTI:
-            return "Optical memory";
+            return "Optical";
         case DTYPE_JUKE:
             return "Jukebox";
         case DTYPE_COMM:
-            return "Communications";
+            return "Comms";
         default:
-            return "Unknown";
+            sprintf(unknown_buffer, "Unk (%d)", device_type);
+            return unknown_buffer;
     }
 }
 

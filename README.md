@@ -18,12 +18,12 @@ This is a very early stage and is probably not useful to anyone yet.
 Working:
 - Enumerate installed SCSI host adapters
 - Enumerate installed SCSI devices
+- Commandline parsing
 
 Not working:
 - Any of the toolbox commands
 
 Not started:
-- Commandline parsing
 - Querying for list of available CD images
 - Changing mounted CD image
 - Windows versions of the software
