@@ -1,4 +1,0 @@
-project : C:\DEV\ESTBOX\SCSITBW.exe C:\DEV\ESTBOX\SCSITB.exe .SYMBOLIC
-
-!include C:\DEV\ESTBOX\SCSITBW.mk1
-!include C:\DEV\ESTBOX\SCSITB.mk1

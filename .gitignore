@@ -1,0 +1,7 @@
+*.obj
+*.lk1
+*.mk1
+*.mk
+*.map
+*.sym
+.vscode/
