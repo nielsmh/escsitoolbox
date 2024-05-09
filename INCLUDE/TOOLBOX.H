@@ -19,12 +19,12 @@
 **/
 
 
-struct ToolboxFileEntry {
+typedef struct {
     unsigned char index;   /* byte 00: file index in directory */
     unsigned char type;    /* byte 01: type 0 = file, 1 = directory */
     char name[33];         /* byte 02-34: filename (32 byte max) + space for NUL terminator */
     unsigned char size[5]; /* byte 35-39: file size (40 bit big endian unsigned) */
-};
+} ToolboxFileEntry;
 
 
 /** TOOLBOX_LIST_FILES (read, length 10)

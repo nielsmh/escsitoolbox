@@ -57,7 +57,7 @@ int ToolboxGetNumCD(Device *dev)
 }
 
 
-int ToolboxListImages(Device *dev, struct ToolboxFileEntry **res)
+int ToolboxListImages(Device *dev, ToolboxFileEntry **res)
 {
     PSRB_ExecSCSICmd10 cmd;
 
@@ -146,11 +146,22 @@ static int DoDeviceInfo(int argc, const char *argv[])
 }
 
 
+static void PrintImageList(int count, ToolboxFileEntry *tfe)
+{
+    printf("%d images available\n", count);
+
+    for (; count > 0; count--, tfe++) {
+        if (tfe->name[0] == '\0') continue;
+        printf("%d %s  %s\n", tfe->index, tfe->type ? " " : "D", tfe->name);
+    }
+}
+
+
 static int DoListImages(int argc, const char *argv[])
 {
     int r = InitSCSI();
     Device *dev;
-    struct ToolboxFileEntry *tfe;
+    ToolboxFileEntry *tfe;
     int count, count2;
 
     if (r) return r;
@@ -167,14 +178,8 @@ static int DoListImages(int argc, const char *argv[])
     count = ToolboxGetNumCD(dev);
     count2 = ToolboxListImages(dev, &tfe);
 
-    if (count2 < count) count = count2;
-    printf("%d images available\n", count);
+    PrintImageList(count < count2 ? count : count2, tfe);
 
-    for (; count > 0; count--, tfe++) {
-        if (tfe->name[0] == '\0') continue;
-        printf("%d %s  %s\n", tfe->index, tfe->type ? " " : "D", tfe->name);
-    }
-        
     return 0;
 }
 
