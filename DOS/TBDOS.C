@@ -182,8 +182,17 @@ int GetAdapterDeviceInfo(int adapter_id)
 static struct Device * GetDeviceByName(const char *devname)
 {
     int i;
+    char alt1[16], alt2[16];
+
+    // support leaving out the LUN for LUN 0 devices
+    snprintf(alt1, sizeof(alt1), "%s:0", devname);
+    // support leaving out HA and LUN for LUN 0 devices on first HA
+    snprintf(alt2, sizeof(alt2), "0:%s:0", devname);
+    
     for (i = 0; i < _num_devices; i++) {
-        if (strncmp(devname, _devices[i].name, sizeof(_devices[i].name)) == 0) {
+        if (strncmp(devname, _devices[i].name, sizeof(_devices[i].name)) == 0 ||
+            strncmp(alt1, _devices[i].name, sizeof(_devices[i].name)) == 0 ||
+            strncmp(alt2, _devices[i].name, sizeof(_devices[i].name)) == 0) {
             return &_devices[i];
         }
     }
