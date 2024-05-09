@@ -6,6 +6,9 @@
 //
 //***************************************************************************
 
+#ifndef SCSIDEFS_H
+#define SCSIDEFS_H
+
 //***************************************************************************
 //                          %%% TARGET STATUS VALUES %%%
 //***************************************************************************
@@ -273,3 +276,6 @@ typedef struct {
 #define ANSI_SCSI2      0x2     // Device complies to SCSI-2
 #define ANSI_RESLO      0x3     // Reserved (low)
 #define ANSI_RESHI      0x7     // Reserved (high)
+
+#endif /* SCSIDEFS_H */
+
