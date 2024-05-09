@@ -208,7 +208,7 @@ static struct Device * GetDeviceByName(const char *devname)
 
 static PSRB_ExecSCSICmd6 PrepareCmd6(struct Device *dev, unsigned char flags)
 {
-    static unsigned char databuf[128];
+    static unsigned char databuf[4096];
     static SRB_ExecSCSICmd6 cmd;
 
     memset(&cmd, 0, sizeof(cmd));
@@ -256,7 +256,7 @@ int ToolboxGetNumCD(struct Device *dev)
             fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_COUNT_CDS", dev->name);
             return 0;
         default:
-            fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_COUNT_CDS was %d, %d, %d\n",
+            fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_COUNT_CDS was %#x, %#x, %#x\n",
                 dev->name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
             PrintSense(cmd->SenseArea6);
             return 0;
@@ -264,6 +264,62 @@ int ToolboxGetNumCD(struct Device *dev)
 
     count = cmd->SRB_BufPointer[0];
     return count;
+}
+
+
+int ToolboxListImages(struct Device *dev, struct ToolboxFileEntry **res)
+{
+    PSRB_ExecSCSICmd6 cmd;
+
+    cmd = PrepareCmd6(dev, SRB_DIR_IN | SRB_DIR_SCSI);
+    if (cmd == NULL) return 0;
+    
+    cmd->CDBByte[0] = TOOLBOX_LIST_CDS;
+    
+    SendASPICommand(cmd);
+    switch (cmd->SRB_Status) {
+        case SS_COMP:
+            break;
+        case SS_PENDING:
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_LIST_CDS", dev->name);
+            return 0;
+        default:
+            fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_LIST_CDS was %#x, %#x, %#x\n",
+                dev->name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
+            PrintSense(cmd->SenseArea6);
+            return 0;
+    }
+
+    *res = (void*)cmd->SRB_BufPointer;
+    return cmd->SRB_BufLen / sizeof(**res);
+}
+
+
+int ToolboxSetImage(struct Device *dev, int newimage)
+{
+    PSRB_ExecSCSICmd6 cmd;
+
+    cmd = PrepareCmd6(dev, SRB_DIR_IN | SRB_DIR_SCSI);
+    if (cmd == NULL) return 0;
+    
+    cmd->CDBByte[0] = TOOLBOX_SET_NEXT_CD;
+    cmd->CDBByte[1] = (unsigned char)newimage;
+    
+    SendASPICommand(cmd);
+    switch (cmd->SRB_Status) {
+        case SS_COMP:
+            break;
+        case SS_PENDING:
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_SET_NEXT_CD", dev->name);
+            return 0;
+        default:
+            fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_SET_NEXT_CD was %#x, %#x, %#x\n",
+                dev->name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
+            PrintSense(cmd->SenseArea6);
+            return 0;
+    }
+
+    return 1;
 }
 
 
@@ -368,6 +424,8 @@ static int DoListImages(int argc, const char *argv[])
 {
     int r = InitSCSI();
     struct Device *dev;
+    struct ToolboxFileEntry *tfe;
+    int count;
 
     if (r) return r;
 
@@ -378,7 +436,14 @@ static int DoListImages(int argc, const char *argv[])
     }
     
     printf("Device %s type %d (%s)\n", dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
-    ToolboxGetNumCD(dev);
+    count = ToolboxGetNumCD(dev);
+    printf("Count returned: %d\n", count);
+
+    count = ToolboxListImages(dev, &tfe);
+    for (; count > 0; count--) {
+        if (tfe->name[0] == '\0') continue;
+        printf("%d %s  %s\n", tfe->index, tfe->isdir ? "D" : " ", tfe->name);
+    }
         
     return 0;
 }
@@ -386,8 +451,29 @@ static int DoListImages(int argc, const char *argv[])
 
 static int DoSetImage(int argc, const char *argv[])
 {
-    printf("The 'setimg' command is not implemented yet. Sorry...\n");
-    return 2;
+    int r = InitSCSI();
+    struct Device *dev;
+    int newimage = -1;
+
+    if (r) return r;
+
+    dev = GetDeviceByName(argv[0]);
+    if (!dev) {
+        fprintf(stderr, "Device ID not found: %s\n", argv[0]);
+        return 16;
+    }
+
+    if (sscanf(argv[1], "%d", &newimage) != 1 || newimage < 0 || newimage > 100) {
+        fprintf(stderr, "Illegal image index, please use an index returned from the 'lsimg' command.\n");
+        return 17;
+    }
+    
+    printf("Device %s type %d (%s)\n", dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
+
+    r = ToolboxSetImage(dev, newimage);
+    if (r == 1) printf("Set next image command sent successfully.\n");
+
+    return r != 0;
 }
 
 

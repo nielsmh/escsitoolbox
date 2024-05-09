@@ -20,10 +20,10 @@
 
 
 struct ToolboxFileEntry {
-    unsigned char index;  /* byte 00: file index in directory */
-    unsigned char isdir;  /* byte 01: is directory flag */
-    char name[33];        /* byte 02-34: filename (32 byte max) + space for NUL terminator */
-    char size[5];         /* byte 35-39: file size (40 bit big endian) */
+    unsigned char index;   /* byte 00: file index in directory */
+    unsigned char isdir;   /* byte 01: is directory flag */
+    char name[33];         /* byte 02-34: filename (32 byte max) + space for NUL terminator */
+    unsigned char size[5]; /* byte 35-39: file size (40 bit big endian unsigned) */
 };
 
 
