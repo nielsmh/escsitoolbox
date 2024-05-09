@@ -19,13 +19,13 @@ Working:
 - Enumerate installed SCSI host adapters
 - Enumerate installed SCSI devices
 - Commandline parsing
-
-Not working:
-- Any of the toolbox commands
-
-Not started:
 - Querying for list of available CD images
 - Changing mounted CD image
+
+Not working:
+- Nothing known
+
+Not started:
 - Windows versions of the software
 - Send and receive files to Share directory on SD card
 

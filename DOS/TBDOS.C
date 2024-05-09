@@ -222,28 +222,34 @@ static PSRB_ExecSCSICmd6 PrepareCmd6(struct Device *dev, unsigned char flags)
     cmd.SRB_SenseLen = SENSE_LEN;
     cmd.SRB_CDBLen = sizeof(cmd.CDBByte);
 
-#if 0
-    printf("Prepared SC_EXEC_SCSI_CMD buffer size %d:\n", sizeof(cmd));
-    printf("  cmd.SRB_Cmd        = %d\n", cmd.SRB_Cmd);
-    printf("  cmd.SRB_HaId       = %d\n", cmd.SRB_HaId);
-    printf("  cmd.SRB_Flags      = %#x\n", cmd.SRB_Flags);
-    printf("  cmd.SRB_Target     = %d\n", cmd.SRB_Target);
-    printf("  cmd.SRB_Lun        = %d\n", cmd.SRB_Lun);
-    printf("  cmd.SRB_BufLen     = %d\n", cmd.SRB_BufLen);
-    printf("  cmd.SRB_BufPointer = %Wp\n", cmd.SRB_BufPointer);
-    printf("  cmd.SRB_SenseLen   = %d\n", cmd.SRB_SenseLen);
-    printf("  cmd.SRB_CDBLen     = %d\n", cmd.SRB_CDBLen);
-#endif
+    return &cmd;
+}
+
+static PSRB_ExecSCSICmd10 PrepareCmd10(struct Device *dev, unsigned char flags)
+{
+    static unsigned char databuf[4096];
+    static SRB_ExecSCSICmd10 cmd;
+
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.SRB_Cmd = SC_EXEC_SCSI_CMD;
+    cmd.SRB_HaId = dev->adapter_id;
+    cmd.SRB_Flags = flags;
+    cmd.SRB_Target = dev->target_id;
+    cmd.SRB_Lun = dev->lun;
+    cmd.SRB_BufLen = sizeof(databuf);
+    cmd.SRB_BufPointer = databuf;
+    cmd.SRB_SenseLen = SENSE_LEN;
+    cmd.SRB_CDBLen = sizeof(cmd.CDBByte);
 
     return &cmd;
 }
 
 int ToolboxGetNumCD(struct Device *dev)
 {
-    PSRB_ExecSCSICmd6 cmd;
+    PSRB_ExecSCSICmd10 cmd;
     unsigned char count;
 
-    cmd = PrepareCmd6(dev, SRB_DIR_IN | SRB_DIR_SCSI);
+    cmd = PrepareCmd10(dev, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return 0;
     
     cmd->CDBByte[0] = TOOLBOX_COUNT_CDS;
@@ -258,7 +264,7 @@ int ToolboxGetNumCD(struct Device *dev)
         default:
             fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_COUNT_CDS was %#x, %#x, %#x\n",
                 dev->name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
-            PrintSense(cmd->SenseArea6);
+            PrintSense(cmd->SenseArea10);
             return 0;
     }
 
@@ -269,9 +275,9 @@ int ToolboxGetNumCD(struct Device *dev)
 
 int ToolboxListImages(struct Device *dev, struct ToolboxFileEntry **res)
 {
-    PSRB_ExecSCSICmd6 cmd;
+    PSRB_ExecSCSICmd10 cmd;
 
-    cmd = PrepareCmd6(dev, SRB_DIR_IN | SRB_DIR_SCSI);
+    cmd = PrepareCmd10(dev, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return 0;
     
     cmd->CDBByte[0] = TOOLBOX_LIST_CDS;
@@ -286,7 +292,7 @@ int ToolboxListImages(struct Device *dev, struct ToolboxFileEntry **res)
         default:
             fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_LIST_CDS was %#x, %#x, %#x\n",
                 dev->name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
-            PrintSense(cmd->SenseArea6);
+            PrintSense(cmd->SenseArea10);
             return 0;
     }
 
@@ -297,9 +303,9 @@ int ToolboxListImages(struct Device *dev, struct ToolboxFileEntry **res)
 
 int ToolboxSetImage(struct Device *dev, int newimage)
 {
-    PSRB_ExecSCSICmd6 cmd;
+    PSRB_ExecSCSICmd10 cmd;
 
-    cmd = PrepareCmd6(dev, SRB_DIR_IN | SRB_DIR_SCSI);
+    cmd = PrepareCmd10(dev, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return 0;
     
     cmd->CDBByte[0] = TOOLBOX_SET_NEXT_CD;
@@ -315,7 +321,7 @@ int ToolboxSetImage(struct Device *dev, int newimage)
         default:
             fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_SET_NEXT_CD was %#x, %#x, %#x\n",
                 dev->name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
-            PrintSense(cmd->SenseArea6);
+            PrintSense(cmd->SenseArea10);
             return 0;
     }
 
@@ -440,9 +446,9 @@ static int DoListImages(int argc, const char *argv[])
     printf("Count returned: %d\n", count);
 
     count = ToolboxListImages(dev, &tfe);
-    for (; count > 0; count--) {
+    for (; count > 0; count--, tfe++) {
         if (tfe->name[0] == '\0') continue;
-        printf("%d %s  %s\n", tfe->index, tfe->isdir ? "D" : " ", tfe->name);
+        printf("%d %s  %s\n", tfe->index, tfe->type ? " " : "D", tfe->name);
     }
         
     return 0;
