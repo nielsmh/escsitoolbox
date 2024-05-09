@@ -110,21 +110,6 @@ int GetHostAdapterInfo(void)
         /* some defaults if the adapter does not supply */
         if (ad->max_targets == 0) ad->max_targets = 8;
         if (ad->max_transfer_length == 0) ad->max_transfer_length = 0x4000; /* 16k */
-
-#if 0
-        printf("Adapter %d (SCSI ID #%d): %s  [%s]\n",
-            adapter_id,
-            ad->scsi_id,
-            ad->adapter_id,
-            ad->manager_id
-            );
-        printf("    Alignment = %#x, Support RBCR = %d, Max targets = %d, Max transfer = %#lx\n",
-            ad->alignment_mask,
-            ad->support_residual_byte_count_reporting,
-            ad->max_targets,
-            ad->max_transfer_length
-            );
-#endif
     } while (++adapter_id < _num_adapters);
 
     return _num_adapters;
@@ -281,6 +266,7 @@ int ToolboxListImages(struct Device *dev, struct ToolboxFileEntry **res)
     if (cmd == NULL) return 0;
     
     cmd->CDBByte[0] = TOOLBOX_LIST_CDS;
+    memset(cmd->SRB_BufPointer, 0, cmd->SRB_BufLen);
     
     SendASPICommand(cmd);
     switch (cmd->SRB_Status) {
@@ -431,7 +417,7 @@ static int DoListImages(int argc, const char *argv[])
     int r = InitSCSI();
     struct Device *dev;
     struct ToolboxFileEntry *tfe;
-    int count;
+    int count, count2;
 
     if (r) return r;
 
@@ -441,11 +427,15 @@ static int DoListImages(int argc, const char *argv[])
         return 16;
     }
     
-    printf("Device %s type %d (%s)\n", dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
-    count = ToolboxGetNumCD(dev);
-    printf("Count returned: %d\n", count);
+    printf("Retrieving images from device %s type %d (%s)...\n",
+        dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
 
-    count = ToolboxListImages(dev, &tfe);
+    count = ToolboxGetNumCD(dev);
+    count2 = ToolboxListImages(dev, &tfe);
+
+    if (count2 < count) count = count2;
+    printf("%d images available\n", count);
+
     for (; count > 0; count--, tfe++) {
         if (tfe->name[0] == '\0') continue;
         printf("%d %s  %s\n", tfe->index, tfe->type ? " " : "D", tfe->name);
@@ -474,7 +464,7 @@ static int DoSetImage(int argc, const char *argv[])
         return 17;
     }
     
-    printf("Device %s type %d (%s)\n", dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
+    printf("Set loaded image for device %s type %d (%s)\n", dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
 
     r = ToolboxSetImage(dev, newimage);
     if (r == 1) printf("Set next image command sent successfully.\n");
