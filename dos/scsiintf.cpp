@@ -173,63 +173,20 @@ int InitSCSI()
     return 0;
 }
 
-PSRB_ExecSCSICmd6 PrepareCmd6(const Device &dev, unsigned char flags)
-{
-    static unsigned char databuf[4096];
-    static SRB_ExecSCSICmd6 cmd;
-
-    memset(&cmd, 0, sizeof(cmd));
-    cmd.SRB_Cmd = SC_EXEC_SCSI_CMD;
-    cmd.SRB_HaId = dev.adapter_id;
-    cmd.SRB_Flags = flags;
-    cmd.SRB_Target = dev.target_id;
-    cmd.SRB_Lun = dev.lun;
-    cmd.SRB_BufLen = sizeof(databuf);
-    cmd.SRB_BufPointer = databuf;
-    cmd.SRB_SenseLen = SENSE_LEN;
-    cmd.SRB_CDBLen = sizeof(cmd.CDBByte);
-
-    return &cmd;
-}
-
-PSRB_ExecSCSICmd10 PrepareCmd10(const Device &dev, unsigned char flags)
-{
-    static unsigned char databuf[4096];
-    static SRB_ExecSCSICmd10 cmd;
-
-    memset(&cmd, 0, sizeof(cmd));
-    cmd.SRB_Cmd = SC_EXEC_SCSI_CMD;
-    cmd.SRB_HaId = dev.adapter_id;
-    cmd.SRB_Flags = flags;
-    cmd.SRB_Target = dev.target_id;
-    cmd.SRB_Lun = dev.lun;
-    cmd.SRB_BufLen = sizeof(databuf);
-    cmd.SRB_BufPointer = databuf;
-    cmd.SRB_SenseLen = SENSE_LEN;
-    cmd.SRB_CDBLen = sizeof(cmd.CDBByte);
-
-    return &cmd;
-}
-
-
 int DeviceInquiry(const Device &dev, DeviceInquiryResult *res)
 {
-    PSRB_ExecSCSICmd6 cmd;
-
     memset(res, 0, sizeof(*res));
 
-    cmd = PrepareCmd6(dev, SRB_DIR_IN | SRB_DIR_SCSI);
-    if (cmd == NULL) return 0;
+    ScsiCommand *cmd = dev.PrepareCommand(6, 56, SRB_DIR_IN | SRB_DIR_SCSI);
     
-    cmd->CDBByte[0] = SCSI_INQUIRY;
-    cmd->CDBByte[1] = 0;
-    cmd->CDBByte[2] = 0;
-    cmd->CDBByte[3] = 0;
-    cmd->CDBByte[4] = 56;
-    cmd->CDBByte[5] = 0;
+    cmd->cdb[0] = SCSI_INQUIRY;
+    cmd->cdb[1] = 0;
+    cmd->cdb[2] = 0;
+    cmd->cdb[3] = 0;
+    cmd->cdb[4] = 56;
+    cmd->cdb[5] = 0;
 
-    SendASPICommand(cmd);
-    switch (cmd->SRB_Status) {
+    switch (cmd->Execute()) {
         case SS_COMP:
             break;
         case SS_PENDING:
@@ -237,14 +194,16 @@ int DeviceInquiry(const Device &dev, DeviceInquiryResult *res)
             return 0;
         default:
             fprintf(stderr, "[%s] Return from SCSI command SCSI_INQUIRY was %d, %d, %d\n",
-                dev.name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
+                dev.name, cmd->GetStatus(), cmd->GetHAStatus(), cmd->GetTargetStatus());
             return 0;
     }
 
-    strncpy(res->vendor, (char *)cmd->SRB_BufPointer+8, 16);
-    strncpy(res->product, (char *)cmd->SRB_BufPointer+16, 16);
-    strncpy(res->rev, (char *)cmd->SRB_BufPointer+32, 4);
-    strncpy(res->vinfo, (char *)cmd->SRB_BufPointer+36, 20);
+    strncpy(res->vendor, (char *)cmd->data_buf+8, 16);
+    strncpy(res->product, (char *)cmd->data_buf+16, 16);
+    strncpy(res->rev, (char *)cmd->data_buf+32, 4);
+    strncpy(res->vinfo, (char *)cmd->data_buf+36, 20);
+
+    delete cmd;
 
     return 1;
 }

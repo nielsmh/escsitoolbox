@@ -30,16 +30,13 @@
 
 bool ToolboxGetImageList(const Device &dev, std::vector<ToolboxFileEntry> &images)
 {
-    PSRB_ExecSCSICmd10 cmd;
-
-    cmd = PrepareCmd10(dev, SRB_DIR_IN | SRB_DIR_SCSI);
+    ScsiCommand *cmd = dev.PrepareCommand(10, 4, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return false;
 
     // Send TOOLBOX_COUNT_CDS command
-    cmd->CDBByte[0] = TOOLBOX_COUNT_CDS;
+    cmd->cdb[0] = TOOLBOX_COUNT_CDS;
     
-    SendASPICommand(cmd);
-    switch (cmd->SRB_Status) {
+    switch (cmd->Execute()) {
         case SS_COMP:
             break;
         case SS_PENDING:
@@ -47,22 +44,26 @@ bool ToolboxGetImageList(const Device &dev, std::vector<ToolboxFileEntry> &image
             return false;
         default:
             fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_COUNT_CDS was %#x, %#x, %#x\n",
-                dev.name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
-            PrintSense(cmd->SenseArea10);
+                dev.name, cmd->GetStatus(), cmd->GetHAStatus(), cmd->GetTargetStatus());
+            PrintSense(cmd->GetSenseData());
             return false;
     }
 
-    size_t count = cmd->SRB_BufPointer[0];
+    size_t count = cmd->data_buf[0];
     images.clear();
     if (count < 1) return false;
     images.reserve(count);
 
-    // Send TOOLBOX_LIST_CDS command
-    cmd->CDBByte[0] = TOOLBOX_LIST_CDS;
-    memset(cmd->SRB_BufPointer, 0, cmd->SRB_BufLen);
+    delete cmd;
 
-    SendASPICommand(cmd);
-    switch (cmd->SRB_Status) {
+    // Send TOOLBOX_LIST_CDS command
+    cmd = dev.PrepareCommand(10, 4096, SRB_DIR_IN | SRB_DIR_SCSI);
+    if (cmd == NULL) return false;
+
+    cmd->cdb[0] = TOOLBOX_LIST_CDS;
+    memset(cmd->data_buf, 0, 4096);
+
+    switch (cmd->Execute()) {
         case SS_COMP:
             break;
         case SS_PENDING:
@@ -70,12 +71,12 @@ bool ToolboxGetImageList(const Device &dev, std::vector<ToolboxFileEntry> &image
             return false;
         default:
             fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_LIST_CDS was %#x, %#x, %#x\n",
-                dev.name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
-            PrintSense(cmd->SenseArea10);
+                dev.name, cmd->GetStatus(), cmd->GetHAStatus(), cmd->GetTargetStatus());
+            PrintSense(cmd->GetSenseData());
             return false;
     }
 
-    BYTE *buf = cmd->SRB_BufPointer;
+    BYTE *buf = cmd->data_buf;
     while (count > 0) {
         ToolboxFileEntry tfe;
         memcpy(&tfe, buf, sizeof(tfe));
@@ -83,23 +84,21 @@ bool ToolboxGetImageList(const Device &dev, std::vector<ToolboxFileEntry> &image
         if (tfe.name[0] == '\0') break;
         images.push_back(tfe);
     }
-    
+
+    delete cmd;
     return true;
 }
 
 
 bool ToolboxSetImage(const Device &dev, int newimage)
 {
-    PSRB_ExecSCSICmd10 cmd;
-
-    cmd = PrepareCmd10(dev, SRB_DIR_IN | SRB_DIR_SCSI);
+    ScsiCommand *cmd = dev.PrepareCommand(10, 4, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return 0;
     
-    cmd->CDBByte[0] = TOOLBOX_SET_NEXT_CD;
-    cmd->CDBByte[1] = (unsigned char)newimage;
+    cmd->cdb[0] = TOOLBOX_SET_NEXT_CD;
+    cmd->cdb[1] = (unsigned char)newimage;
     
-    SendASPICommand(cmd);
-    switch (cmd->SRB_Status) {
+    switch (cmd->Execute()) {
         case SS_COMP:
             break;
         case SS_PENDING:
@@ -107,10 +106,12 @@ bool ToolboxSetImage(const Device &dev, int newimage)
             return false;
         default:
             fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_SET_NEXT_CD was %#x, %#x, %#x\n",
-                dev.name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
-            PrintSense(cmd->SenseArea10);
+                dev.name, cmd->GetStatus(), cmd->GetHAStatus(), cmd->GetTargetStatus());
+            PrintSense(cmd->GetSenseData());
             return false;
     }
+
+    delete cmd;
 
     return true;
 }

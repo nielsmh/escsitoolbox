@@ -256,15 +256,6 @@ typedef struct                                  // Offset
 SRB_BusDeviceReset, *PSRB_BusDeviceReset, FAR *LPSRB_BusDeviceReset;
 
 
-unsigned short far SendASPICommand(void far *pSrb);
-
-int InitASPI(void);
-
-const char *GetDeviceTypeName(int device_type);
-
-void PrintSense(BYTE far *sense);
-
-
 #pragma pack(pop)
 
 #ifdef __cplusplus

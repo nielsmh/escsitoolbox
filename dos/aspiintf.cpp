@@ -17,6 +17,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **/
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <dos.h>
 #include <i86.h>
@@ -27,6 +28,7 @@
 
 #include "../include/aspi.h"
 #include "../include/scsidefs.h"
+#include "../include/estb.h"
 
 typedef unsigned short (__pascal far *Aspiproc)(void far *pSrb);
 static Aspiproc _aspiproc = NULL;
@@ -107,6 +109,89 @@ int InitASPI(void)
     return _aspiproc != NULL;
 }
 
+struct DosScsiCommand : public ScsiCommand {
+    union {
+        // All of these structs are identical up until CDBByte,
+        // meaning all fields except CDBByte and SenseArea
+        // can be accessed via either union member.
+        SRB_ExecSCSICmd6 srb6;
+        SRB_ExecSCSICmd10 srb10;
+        SRB_ExecSCSICmd12 srb12;
+    };
+
+    DosScsiCommand(const Device *dev, unsigned char cdbsize, unsigned int bufsize, unsigned char flags)
+    {
+        switch (cdbsize) {
+            case 6:
+                memset(&srb6, 0, sizeof(srb6));
+                srb6.SRB_CDBLen = 6;
+                this->cdb = srb6.CDBByte;
+                break;
+            case 10:
+                memset(&srb10, 0, sizeof(srb10));
+                srb10.SRB_CDBLen = 10;
+                this->cdb = srb10.CDBByte;
+                break;
+            case 12:
+                memset(&srb12, 0, sizeof(srb12));
+                srb10.SRB_CDBLen = 12;
+                this->cdb = srb12.CDBByte;
+                break;
+            default:
+                abort();
+        }
+        
+        data_buf = new unsigned char[bufsize];
+        memset(data_buf, 0, bufsize);
+        device = dev;
+        
+        srb6.SRB_Cmd = SC_EXEC_SCSI_CMD;
+        srb6.SRB_HaId = device->adapter_id;
+        srb6.SRB_Flags = flags;
+        srb6.SRB_Target = device->target_id;
+        srb6.SRB_Lun = device->lun;
+        srb6.SRB_BufLen = bufsize;
+        srb6.SRB_BufPointer = data_buf;
+        srb6.SRB_SenseLen = SENSE_LEN;
+    }
+
+    virtual unsigned char Execute()
+    {
+        return SendASPICommand(&srb6);
+    }
+    
+    unsigned int GetBufSize() const { return srb6.SRB_BufLen; }
+    unsigned char GetCDBSize() const { return srb6.SRB_CDBLen; }
+    unsigned char GetStatus() const { return srb6.SRB_Status; }
+    unsigned char GetFlags() const { return srb6.SRB_Flags; }
+    unsigned char GetHAStatus() const { return srb6.SRB_HaStat; }
+    unsigned char GetTargetStatus() const { return srb6.SRB_TargStat; }
+    const SENSE_DATA_FMT far *GetSenseData() const
+    {
+        switch (srb6.SRB_CDBLen) {
+            case 6:
+                return (SENSE_DATA_FMT far *)(void far *)srb6.SenseArea6;
+            case 10:
+                return (SENSE_DATA_FMT far *)(void far *)srb10.SenseArea10;
+            case 12:
+                return (SENSE_DATA_FMT far *)(void far *)srb12.SenseArea12;
+            default:
+                abort();
+                return NULL;
+        }
+    }
+
+    virtual ~DosScsiCommand()
+    {
+        delete[] data_buf;
+    }
+};
+
+ScsiCommand far * Device::PrepareCommand(unsigned char cdbsize, unsigned int bufsize, unsigned char flags) const
+{
+    return new DosScsiCommand(this, cdbsize, bufsize, flags);
+}
+
 const char *GetDeviceTypeName(int device_type)
 {
     static char unknown_buffer[10];
@@ -138,17 +223,15 @@ const char *GetDeviceTypeName(int device_type)
     }
 }
 
-void PrintSense(BYTE far *sense)
+void PrintSense(const SENSE_DATA_FMT far *s)
 {
-    SENSE_DATA_FMT s;
-    memcpy(&s, sense, sizeof(s));
     printf("SENSE: err=%02x seg=%02x key=%02x info=%02x%02x%02x%02x addlen=%02x\n",
-        s.ErrorCode, s.SegmentNum, s.SenseKey,
-        s.InfoByte0, s.InfoByte1, s.InfoByte2, s.InfoByte3,
-        s.AddSenLen);
+        s->ErrorCode, s->SegmentNum, s->SenseKey,
+        s->InfoByte0, s->InfoByte1, s->InfoByte2, s->InfoByte3,
+        s->AddSenLen);
     printf("       cominf=%02x%02x%02x%02x addcode=%02x addqual=%02x frepuc=%02x\n",
-        s.ComSpecInf0, s.ComSpecInf1, s.ComSpecInf2, s.ComSpecInf3,
-        s.AddSenseCode, s.AddSenQual, s.FieldRepUCode);
+        s->ComSpecInf0, s->ComSpecInf1, s->ComSpecInf2, s->ComSpecInf3,
+        s->AddSenseCode, s->AddSenQual, s->FieldRepUCode);
 }
 
 

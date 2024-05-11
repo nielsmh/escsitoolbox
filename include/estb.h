@@ -36,12 +36,16 @@ struct Adapter {
     unsigned long max_transfer_length;
 };
 
+struct ScsiCommand;
+
 struct Device {
     char name[6];
     unsigned char devtype;
     unsigned char adapter_id;
     unsigned char target_id;
     unsigned char lun;
+
+    ScsiCommand far *PrepareCommand(unsigned char cdbsize, unsigned int bufsize, unsigned char flags) const;
 };
 
 struct DeviceInquiryResult {
@@ -51,18 +55,43 @@ struct DeviceInquiryResult {
     char vinfo[24];
 };
 
+struct ScsiCommand {
+    unsigned char far *data_buf;
+    unsigned char far *cdb;
+    const Device far *device;
+    
+    virtual unsigned int GetBufSize() const = 0;
+    virtual unsigned char GetCDBSize() const = 0;
+    virtual unsigned char GetStatus() const = 0;
+    virtual unsigned char GetFlags() const = 0;
+    virtual unsigned char GetHAStatus() const = 0;
+    virtual unsigned char GetTargetStatus() const = 0;
+    virtual const SENSE_DATA_FMT far *GetSenseData() const = 0;
+
+    virtual unsigned char Execute();
+    
+    virtual ~ScsiCommand() { }
+};
+
 
 extern std::vector<Adapter> _adapters;
 extern std::vector<Device> _devices;
 
 int InitSCSI();
 
-PSRB_ExecSCSICmd6 PrepareCmd6(const Device &dev, unsigned char flags);
-PSRB_ExecSCSICmd10 PrepareCmd10(const Device &dev, unsigned char flags);
+ScsiCommand far *PrepareSCSICommand(const Device far *dev, unsigned char cdbsize, unsigned int bufsize, unsigned char flags);
 
 int DeviceInquiry(const Device &dev, DeviceInquiryResult *res);
 
 const Device * GetDeviceByName(const char *devname);
+
+unsigned short far SendASPICommand(void far *pSrb);
+
+int InitASPI(void);
+
+const char *GetDeviceTypeName(int device_type);
+
+void PrintSense(const SENSE_DATA_FMT far *s);
 
 #endif /* ESTB_H */
 
