@@ -23,6 +23,7 @@
 
 #include "../include/estb.h"
 
+
 std::vector<Adapter> _adapters;
 std::vector<Device> _devices;
 
@@ -57,6 +58,7 @@ static int GetHostAdapterInfo(void)
 
         /* fill Adapter struct */
         Adapter *ad = &_adapters[adapter_id];
+        memset(ad, 0, sizeof(*ad));
         ad->scsi_id = host_adapter_info.HA_SCSI_ID;
         strncpy(ad->manager_id,
             (char *)host_adapter_info.HA_ManagerId,
@@ -171,17 +173,17 @@ int InitSCSI()
     return 0;
 }
 
-PSRB_ExecSCSICmd6 PrepareCmd6(Device *dev, unsigned char flags)
+PSRB_ExecSCSICmd6 PrepareCmd6(const Device &dev, unsigned char flags)
 {
     static unsigned char databuf[4096];
     static SRB_ExecSCSICmd6 cmd;
 
     memset(&cmd, 0, sizeof(cmd));
     cmd.SRB_Cmd = SC_EXEC_SCSI_CMD;
-    cmd.SRB_HaId = dev->adapter_id;
+    cmd.SRB_HaId = dev.adapter_id;
     cmd.SRB_Flags = flags;
-    cmd.SRB_Target = dev->target_id;
-    cmd.SRB_Lun = dev->lun;
+    cmd.SRB_Target = dev.target_id;
+    cmd.SRB_Lun = dev.lun;
     cmd.SRB_BufLen = sizeof(databuf);
     cmd.SRB_BufPointer = databuf;
     cmd.SRB_SenseLen = SENSE_LEN;
@@ -190,17 +192,17 @@ PSRB_ExecSCSICmd6 PrepareCmd6(Device *dev, unsigned char flags)
     return &cmd;
 }
 
-PSRB_ExecSCSICmd10 PrepareCmd10(Device *dev, unsigned char flags)
+PSRB_ExecSCSICmd10 PrepareCmd10(const Device &dev, unsigned char flags)
 {
     static unsigned char databuf[4096];
     static SRB_ExecSCSICmd10 cmd;
 
     memset(&cmd, 0, sizeof(cmd));
     cmd.SRB_Cmd = SC_EXEC_SCSI_CMD;
-    cmd.SRB_HaId = dev->adapter_id;
+    cmd.SRB_HaId = dev.adapter_id;
     cmd.SRB_Flags = flags;
-    cmd.SRB_Target = dev->target_id;
-    cmd.SRB_Lun = dev->lun;
+    cmd.SRB_Target = dev.target_id;
+    cmd.SRB_Lun = dev.lun;
     cmd.SRB_BufLen = sizeof(databuf);
     cmd.SRB_BufPointer = databuf;
     cmd.SRB_SenseLen = SENSE_LEN;
@@ -210,7 +212,7 @@ PSRB_ExecSCSICmd10 PrepareCmd10(Device *dev, unsigned char flags)
 }
 
 
-int DeviceInquiry(Device *dev, DeviceInquiryResult *res)
+int DeviceInquiry(const Device &dev, DeviceInquiryResult *res)
 {
     PSRB_ExecSCSICmd6 cmd;
 
@@ -231,11 +233,11 @@ int DeviceInquiry(Device *dev, DeviceInquiryResult *res)
         case SS_COMP:
             break;
         case SS_PENDING:
-            fprintf(stderr, "[%s] Timeout waiting for SCSI_INQUIRY", dev->name);
+            fprintf(stderr, "[%s] Timeout waiting for SCSI_INQUIRY", dev.name);
             return 0;
         default:
             fprintf(stderr, "[%s] Return from SCSI command SCSI_INQUIRY was %d, %d, %d\n",
-                dev->name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
+                dev.name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
             return 0;
     }
 
@@ -247,7 +249,7 @@ int DeviceInquiry(Device *dev, DeviceInquiryResult *res)
     return 1;
 }
 
-Device * GetDeviceByName(const char *devname)
+const Device * GetDeviceByName(const char *devname)
 {
     int i;
     char alt1[16], alt2[16];

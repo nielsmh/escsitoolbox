@@ -29,7 +29,7 @@
 #include "../include/scsidefs.h"
 
 typedef unsigned short (__pascal far *Aspiproc)(void far *pSrb);
-static Aspiproc _aspiproc;
+static Aspiproc _aspiproc = NULL;
 
 static void Spinner(void) {
     static char *SPINNER = "-\\|/";
@@ -76,7 +76,7 @@ unsigned short far SendASPICommand(void far *pSrb)
 
     return WaitForASPI(&header->SRB_Status);
 }
- 
+
 int InitASPI(void)
 {
     int aspimgr = 0;
@@ -92,8 +92,8 @@ int InitASPI(void)
     // DOS IOCTL read
     regs.w.ax = 0x4402;
     regs.w.bx = aspimgr;
-    regs.w.cx = sizeof(_aspiproc);
-    regs.w.dx = (unsigned)(void near *)&_aspiproc;
+    regs.w.cx = sizeof(entrypoint);
+    regs.w.dx = (unsigned)&entrypoint;
     intdos(&regs, &regs);
     if (regs.w.cflag) {
         fprintf(stderr, "Error obtaining ASPI manager entry point\n");
@@ -101,6 +101,8 @@ int InitASPI(void)
     }
 
     _dos_close(aspimgr);
+
+    _aspiproc = (Aspiproc)entrypoint;
 
     return _aspiproc != NULL;
 }

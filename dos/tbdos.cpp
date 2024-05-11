@@ -28,14 +28,14 @@
 #include "../include/estb.h"
 
 
-int ToolboxGetNumCD(Device *dev)
+bool ToolboxGetImageList(const Device &dev, std::vector<ToolboxFileEntry> &images)
 {
     PSRB_ExecSCSICmd10 cmd;
-    unsigned char count;
 
     cmd = PrepareCmd10(dev, SRB_DIR_IN | SRB_DIR_SCSI);
-    if (cmd == NULL) return 0;
-    
+    if (cmd == NULL) return false;
+
+    // Send TOOLBOX_COUNT_CDS command
     cmd->CDBByte[0] = TOOLBOX_COUNT_CDS;
     
     SendASPICommand(cmd);
@@ -43,50 +43,52 @@ int ToolboxGetNumCD(Device *dev)
         case SS_COMP:
             break;
         case SS_PENDING:
-            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_COUNT_CDS", dev->name);
-            return 0;
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_COUNT_CDS", dev.name);
+            return false;
         default:
             fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_COUNT_CDS was %#x, %#x, %#x\n",
-                dev->name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
+                dev.name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
             PrintSense(cmd->SenseArea10);
-            return 0;
+            return false;
     }
 
-    count = cmd->SRB_BufPointer[0];
-    return count;
-}
+    size_t count = cmd->SRB_BufPointer[0];
+    images.clear();
+    if (count < 1) return false;
+    images.reserve(count);
 
-
-int ToolboxListImages(Device *dev, ToolboxFileEntry **res)
-{
-    PSRB_ExecSCSICmd10 cmd;
-
-    cmd = PrepareCmd10(dev, SRB_DIR_IN | SRB_DIR_SCSI);
-    if (cmd == NULL) return 0;
-    
+    // Send TOOLBOX_LIST_CDS command
     cmd->CDBByte[0] = TOOLBOX_LIST_CDS;
     memset(cmd->SRB_BufPointer, 0, cmd->SRB_BufLen);
-    
+
     SendASPICommand(cmd);
     switch (cmd->SRB_Status) {
         case SS_COMP:
             break;
         case SS_PENDING:
-            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_LIST_CDS", dev->name);
-            return 0;
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_LIST_CDS", dev.name);
+            return false;
         default:
             fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_LIST_CDS was %#x, %#x, %#x\n",
-                dev->name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
+                dev.name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
             PrintSense(cmd->SenseArea10);
-            return 0;
+            return false;
     }
 
-    *res = (ToolboxFileEntry *)(void *)cmd->SRB_BufPointer;
-    return cmd->SRB_BufLen / sizeof(**res);
+    BYTE *buf = cmd->SRB_BufPointer;
+    while (count > 0) {
+        ToolboxFileEntry tfe;
+        memcpy(&tfe, buf, sizeof(tfe));
+        buf += sizeof(tfe);
+        if (tfe.name[0] == '\0') break;
+        images.push_back(tfe);
+    }
+    
+    return true;
 }
 
 
-int ToolboxSetImage(Device *dev, int newimage)
+bool ToolboxSetImage(const Device &dev, int newimage)
 {
     PSRB_ExecSCSICmd10 cmd;
 
@@ -101,16 +103,16 @@ int ToolboxSetImage(Device *dev, int newimage)
         case SS_COMP:
             break;
         case SS_PENDING:
-            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_SET_NEXT_CD", dev->name);
-            return 0;
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_SET_NEXT_CD", dev.name);
+            return false;
         default:
             fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_SET_NEXT_CD was %#x, %#x, %#x\n",
-                dev->name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
+                dev.name, cmd->SRB_Status, cmd->SRB_HaStat, cmd->SRB_TargStat);
             PrintSense(cmd->SenseArea10);
-            return 0;
+            return false;
     }
 
-    return 1;
+    return true;
 }
 
 
@@ -129,7 +131,7 @@ static int DoDeviceInfo(int argc, const char *argv[])
     );
 
     for (dev_id = 0; dev_id < _devices.size(); dev_id++) {
-        r = DeviceInquiry(&_devices[dev_id], &di);
+        r = DeviceInquiry(_devices[dev_id], &di);
         if (r) {
             errors++;
         }
@@ -146,13 +148,12 @@ static int DoDeviceInfo(int argc, const char *argv[])
 }
 
 
-static void PrintImageList(int count, ToolboxFileEntry *tfe)
+static void PrintImageList(const std::vector<ToolboxFileEntry> &tfe)
 {
-    printf("%d images available\n", count);
+    printf("%d images available\n", tfe.size());
 
-    for (; count > 0; count--, tfe++) {
-        if (tfe->name[0] == '\0') continue;
-        printf("%d %s  %s\n", tfe->index, tfe->type ? " " : "D", tfe->name);
+    for (size_t i = 0; i < tfe.size(); i++) {
+        printf("%d %s  %s\n", tfe[i].index, tfe[i].type ? " " : "D", tfe[i].name);
     }
 }
 
@@ -160,13 +161,10 @@ static void PrintImageList(int count, ToolboxFileEntry *tfe)
 static int DoListImages(int argc, const char *argv[])
 {
     int r = InitSCSI();
-    Device *dev;
-    ToolboxFileEntry *tfe;
-    int count, count2;
 
     if (r) return r;
 
-    dev = GetDeviceByName(argv[0]);
+    const Device *dev = GetDeviceByName(argv[0]);
     if (!dev) {
         fprintf(stderr, "Device ID not found: %s\n", argv[0]);
         return 16;
@@ -175,24 +173,25 @@ static int DoListImages(int argc, const char *argv[])
     printf("Retrieving images from device %s type %d (%s)...\n",
         dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
 
-    count = ToolboxGetNumCD(dev);
-    count2 = ToolboxListImages(dev, &tfe);
-
-    PrintImageList(count < count2 ? count : count2, tfe);
-
-    return 0;
+    std::vector<ToolboxFileEntry> images;
+    
+    if (ToolboxGetImageList(*dev, images)) {
+        PrintImageList(images);
+        return 0;
+    } else {
+        return 1;
+    }
 }
 
 
 static int DoSetImage(int argc, const char *argv[])
 {
     int r = InitSCSI();
-    Device *dev;
     int newimage = -1;
 
     if (r) return r;
 
-    dev = GetDeviceByName(argv[0]);
+    const Device *dev = GetDeviceByName(argv[0]);
     if (!dev) {
         fprintf(stderr, "Device ID not found: %s\n", argv[0]);
         return 16;
@@ -205,7 +204,7 @@ static int DoSetImage(int argc, const char *argv[])
     
     printf("Set loaded image for device %s type %d (%s)\n", dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
 
-    r = ToolboxSetImage(dev, newimage);
+    r = ToolboxSetImage(*dev, newimage);
     if (r == 1) printf("Set next image command sent successfully.\n");
 
     return r != 0;

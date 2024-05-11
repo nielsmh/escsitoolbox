@@ -57,12 +57,12 @@ extern std::vector<Device> _devices;
 
 int InitSCSI();
 
-PSRB_ExecSCSICmd6 PrepareCmd6(Device *dev, unsigned char flags);
-PSRB_ExecSCSICmd10 PrepareCmd10(Device *dev, unsigned char flags);
+PSRB_ExecSCSICmd6 PrepareCmd6(const Device &dev, unsigned char flags);
+PSRB_ExecSCSICmd10 PrepareCmd10(const Device &dev, unsigned char flags);
 
-int DeviceInquiry(Device *dev, DeviceInquiryResult *res);
+int DeviceInquiry(const Device &dev, DeviceInquiryResult *res);
 
-Device * GetDeviceByName(const char *devname);
+const Device * GetDeviceByName(const char *devname);
 
 #endif /* ESTB_H */
 
