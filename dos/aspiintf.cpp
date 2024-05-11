@@ -119,7 +119,7 @@ struct DosScsiCommand : public ScsiCommand {
         SRB_ExecSCSICmd12 srb12;
     };
 
-    DosScsiCommand(const Device *dev, unsigned char cdbsize, unsigned int bufsize, unsigned char flags)
+    DosScsiCommand(const Device *dev, unsigned char cdbsize, unsigned long bufsize, unsigned char flags)
     {
         switch (cdbsize) {
             case 6:
@@ -160,7 +160,7 @@ struct DosScsiCommand : public ScsiCommand {
         return SendASPICommand(&srb6);
     }
     
-    unsigned int GetBufSize() const { return srb6.SRB_BufLen; }
+    unsigned long GetBufSize() const { return srb6.SRB_BufLen; }
     unsigned char GetCDBSize() const { return srb6.SRB_CDBLen; }
     unsigned char GetStatus() const { return srb6.SRB_Status; }
     unsigned char GetFlags() const { return srb6.SRB_Flags; }
@@ -187,7 +187,7 @@ struct DosScsiCommand : public ScsiCommand {
     }
 };
 
-ScsiCommand far * Device::PrepareCommand(unsigned char cdbsize, unsigned int bufsize, unsigned char flags) const
+ScsiCommand far * Device::PrepareCommand(unsigned char cdbsize, unsigned long bufsize, unsigned char flags) const
 {
     return new DosScsiCommand(this, cdbsize, bufsize, flags);
 }

@@ -45,7 +45,7 @@ struct Device {
     unsigned char target_id;
     unsigned char lun;
 
-    ScsiCommand far *PrepareCommand(unsigned char cdbsize, unsigned int bufsize, unsigned char flags) const;
+    ScsiCommand far *PrepareCommand(unsigned char cdbsize, unsigned long bufsize, unsigned char flags) const;
 };
 
 struct DeviceInquiryResult {
@@ -60,7 +60,7 @@ struct ScsiCommand {
     unsigned char far *cdb;
     const Device far *device;
     
-    virtual unsigned int GetBufSize() const = 0;
+    virtual unsigned long GetBufSize() const = 0;
     virtual unsigned char GetCDBSize() const = 0;
     virtual unsigned char GetStatus() const = 0;
     virtual unsigned char GetFlags() const = 0;
@@ -78,8 +78,6 @@ extern std::vector<Adapter> _adapters;
 extern std::vector<Device> _devices;
 
 int InitSCSI();
-
-ScsiCommand far *PrepareSCSICommand(const Device far *dev, unsigned char cdbsize, unsigned int bufsize, unsigned char flags);
 
 int DeviceInquiry(const Device &dev, DeviceInquiryResult *res);
 
