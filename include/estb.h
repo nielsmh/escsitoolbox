@@ -20,11 +20,13 @@
 #ifndef ESTB_H
 #define ESTB_H
 
+#include <vector>
+
 #include "../include/aspi.h"
 #include "../include/scsidefs.h"
 
 
-typedef struct {
+struct Adapter {
     short scsi_id;
     char manager_id[18];
     char adapter_id[18];
@@ -32,28 +34,26 @@ typedef struct {
     unsigned char support_residual_byte_count_reporting;
     unsigned char max_targets;
     unsigned long max_transfer_length;
-} Adapter;
+};
 
-typedef struct {
+struct Device {
     char name[6];
     unsigned char devtype;
     unsigned char adapter_id;
     unsigned char target_id;
     unsigned char lun;
-} Device;
+};
 
-typedef struct {
+struct DeviceInquiryResult {
     char vendor[20];
     char product[20];
     char rev[8];
     char vinfo[24];
-} DeviceInquiryResult;
+};
 
 
-extern unsigned char _num_adapters;
-extern unsigned char _num_devices;
-extern Adapter *_adapters;
-extern Device *_devices;
+extern std::vector<Adapter> _adapters;
+extern std::vector<Device> _devices;
 
 int InitSCSI();
 

@@ -81,7 +81,7 @@ int ToolboxListImages(Device *dev, ToolboxFileEntry **res)
             return 0;
     }
 
-    *res = (void*)cmd->SRB_BufPointer;
+    *res = (ToolboxFileEntry *)(void *)cmd->SRB_BufPointer;
     return cmd->SRB_BufLen / sizeof(**res);
 }
 
@@ -128,7 +128,7 @@ static int DoDeviceInfo(int argc, const char *argv[])
         "------------------------------------------------------------------------------\n"
     );
 
-    for (dev_id = 0; dev_id < _num_devices; dev_id++) {
+    for (dev_id = 0; dev_id < _devices.size(); dev_id++) {
         r = DeviceInquiry(&_devices[dev_id], &di);
         if (r) {
             errors++;

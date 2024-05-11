@@ -1,3 +1,21 @@
+/** 
+ * Copyright (C) 2024 Niels Martin Hansen
+ * 
+ * This file is part of the Emulated SCSI Toolbox
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version. 
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details. 
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+**/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,17 +23,15 @@
 
 #include "../include/estb.h"
 
-unsigned char _num_adapters = 0;
-unsigned char _num_devices = 0;
-Adapter *_adapters = NULL;
-Device *_devices = NULL;
+std::vector<Adapter> _adapters;
+std::vector<Device> _devices;
 
 
 static int GetHostAdapterInfo(void)
 {
     SRB_HAInquiry host_adapter_info;
-    Adapter *ad;
     int adapter_id = 0;
+    size_t num_adapters = 0;
 
     do {
         memset(&host_adapter_info, 0, sizeof(host_adapter_info));
@@ -32,21 +48,21 @@ static int GetHostAdapterInfo(void)
                 fprintf(stderr, "Return from SC_HA_INQUIRY was %d\n", host_adapter_info.SRB_Status);
                 return 0;
         }
-        
-        _num_adapters = host_adapter_info.HA_Count;
-        if (_adapters == NULL) {
-            _adapters = calloc(_num_adapters, sizeof(*_adapters));
-            _devices = calloc(MAX_SCSI_LUNS * _num_adapters, sizeof(*_devices));
+
+        num_adapters = host_adapter_info.HA_Count;
+        if (_adapters.empty()) {
+            _adapters.resize(num_adapters);
+            _devices.reserve(MAX_SCSI_LUNS * num_adapters);
         }
 
         /* fill Adapter struct */
-        ad = &_adapters[adapter_id];
+        Adapter *ad = &_adapters[adapter_id];
         ad->scsi_id = host_adapter_info.HA_SCSI_ID;
         strncpy(ad->manager_id,
-            host_adapter_info.HA_ManagerId,
+            (char *)host_adapter_info.HA_ManagerId,
             sizeof(host_adapter_info.HA_ManagerId));
         strncpy(ad->adapter_id,
-            host_adapter_info.HA_Identifier,
+            (char *)host_adapter_info.HA_Identifier,
             sizeof(host_adapter_info.HA_Identifier));
         ad->alignment_mask =
             host_adapter_info.HA_Unique[1] | host_adapter_info.HA_Unique[0] << 8;
@@ -63,9 +79,9 @@ static int GetHostAdapterInfo(void)
         /* some defaults if the adapter does not supply */
         if (ad->max_targets == 0) ad->max_targets = 8;
         if (ad->max_transfer_length == 0) ad->max_transfer_length = 0x4000; /* 16k */
-    } while (++adapter_id < _num_adapters);
+    } while (++adapter_id < num_adapters);
 
-    return _num_adapters;
+    return num_adapters;
 }
 
 
@@ -112,18 +128,15 @@ static int GetAdapterDeviceInfo(int adapter_id)
             if (r < 0) return 0;
             if (r == 0) continue;
 
-            sprintf(_devices[_num_devices].name,
-                "%d:%d:%d",
-                adapter_id,
-                target_id,
-                lun
-                );
-            _devices[_num_devices].devtype = devtype;
-            _devices[_num_devices].adapter_id = adapter_id;
-            _devices[_num_devices].target_id = target_id;
-            _devices[_num_devices].lun = lun;
+            _devices.push_back(Device());
+            Device &d = _devices.back();
+
+            sprintf(d.name, "%d:%d:%d", adapter_id, target_id, lun);
+            d.devtype = devtype;
+            d.adapter_id = adapter_id;
+            d.target_id = target_id;
+            d.lun = lun;
             
-            _num_devices++;
             devsonadapter++;
         }
     }
@@ -146,11 +159,11 @@ int InitSCSI()
         return 254;
     }
 
-    for (id = 0; id < _num_adapters; id++) {
+    for (id = 0; id < _adapters.size(); id++) {
         GetAdapterDeviceInfo(id);
     }
 
-    if (_num_devices == 0) {
+    if (_devices.empty()) {
         fprintf(stderr, "No devices found on any SCSI host adapter.\n");
         return 253;
     }    
@@ -226,10 +239,10 @@ int DeviceInquiry(Device *dev, DeviceInquiryResult *res)
             return 0;
     }
 
-    strncpy(res->vendor, cmd->SRB_BufPointer+8, 16);
-    strncpy(res->product, cmd->SRB_BufPointer+16, 16);
-    strncpy(res->rev, cmd->SRB_BufPointer+32, 4);
-    strncpy(res->vinfo, cmd->SRB_BufPointer+36, 20);
+    strncpy(res->vendor, (char *)cmd->SRB_BufPointer+8, 16);
+    strncpy(res->product, (char *)cmd->SRB_BufPointer+16, 16);
+    strncpy(res->rev, (char *)cmd->SRB_BufPointer+32, 4);
+    strncpy(res->vinfo, (char *)cmd->SRB_BufPointer+36, 20);
 
     return 1;
 }
@@ -244,7 +257,7 @@ Device * GetDeviceByName(const char *devname)
     // support leaving out HA and LUN for LUN 0 devices on first HA
     snprintf(alt2, sizeof(alt2), "0:%s:0", devname);
     
-    for (i = 0; i < _num_devices; i++) {
+    for (i = 0; i < _devices.size(); i++) {
         if (strncmp(devname, _devices[i].name, sizeof(_devices[i].name)) == 0 ||
             strncmp(alt1, _devices[i].name, sizeof(_devices[i].name)) == 0 ||
             strncmp(alt2, _devices[i].name, sizeof(_devices[i].name)) == 0) {

@@ -28,7 +28,8 @@
 #include "../include/aspi.h"
 #include "../include/scsidefs.h"
 
-static unsigned short (__pascal far *aspiproc)(void far *pSrb);
+typedef unsigned short (__pascal far *Aspiproc)(void far *pSrb);
+static Aspiproc _aspiproc;
 
 static void Spinner(void) {
     static char *SPINNER = "-\\|/";
@@ -69,9 +70,9 @@ static int WaitForASPI(BYTE *status)
 
 unsigned short far SendASPICommand(void far *pSrb)
 {
-    PSRB_Header header = pSrb;
+    PSRB_Header header = (PSRB_Header)pSrb;
 
-    aspiproc(pSrb);
+    _aspiproc(pSrb);
 
     return WaitForASPI(&header->SRB_Status);
 }
@@ -91,18 +92,17 @@ int InitASPI(void)
     // DOS IOCTL read
     regs.w.ax = 0x4402;
     regs.w.bx = aspimgr;
-    regs.w.cx = sizeof(entrypoint);
-    regs.w.dx = (unsigned)&entrypoint;
+    regs.w.cx = sizeof(_aspiproc);
+    regs.w.dx = (unsigned)(void near *)&_aspiproc;
     intdos(&regs, &regs);
     if (regs.w.cflag) {
         fprintf(stderr, "Error obtaining ASPI manager entry point\n");
         return 0;
     }
-    aspiproc = entrypoint;
 
     _dos_close(aspimgr);
 
-    return aspiproc != NULL;
+    return _aspiproc != NULL;
 }
 
 const char *GetDeviceTypeName(int device_type)
