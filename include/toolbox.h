@@ -24,6 +24,15 @@ typedef struct {
     unsigned char type;    /* byte 01: type 0 = file, 1 = directory */
     char name[33];         /* byte 02-34: filename (32 byte max) + space for NUL terminator */
     unsigned char size[5]; /* byte 35-39: file size (40 bit big endian unsigned) */
+
+    unsigned long GetSize() const
+    {
+        return
+            (unsigned long)size[1] << 24 |
+            (unsigned long)size[2] << 16 |
+            (unsigned long)size[3] <<  8 |
+            (unsigned long)size[4];
+    }
 } ToolboxFileEntry;
 
 
