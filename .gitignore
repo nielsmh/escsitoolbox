@@ -1,7 +1,10 @@
 *.obj
+*.err
 *.lk1
 *.mk1
 *.mk
 *.map
 *.sym
+*.res
+*.re@
 .vscode/
