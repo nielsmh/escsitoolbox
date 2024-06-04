@@ -5,8 +5,8 @@ These include the BlueSCSI and ZuluSCSI firmwares.
 The supported hosts are intended to be 16 bit MS-DOS, Windows 3.x, and Windows 9x.
 
 Firmwares known to support this interface:
-* https://github.com/BlueSCSI/BlueSCSI-v2
-* https://github.com/ZuluSCSI/ZuluSCSI-firmware
+* https://github.com/BlueSCSI/BlueSCSI-v2 (version 2024.05.21 and later)
+* https://github.com/ZuluSCSI/ZuluSCSI-firmware (version 2024.05.17 and later)
 
 The Toolbox functionality in this line of firmwares was originally designed for a
 Mac OS application and has a few design choices relating to that.
@@ -35,15 +35,17 @@ Not started:
 ## Usage (DOS)
 
 Make sure your BlueSCSI or ZuluSCSI device is running a firmware version with
-Toolbox support, and that Toolbox is enabled in your config file:
+Toolbox support. For ZuluSCSI youj also need to make sure the Toolbox is
+enabled in your config file:
 ```
 [SCSI]
 ; ... various other settings here
 EnableToolbox = 1
 ```
 
-Make sure you have installed an appropriate ASPI driver for DOS
-in your `config.sys` file.
+Make sure you have installed an appropriate ASPI driver for DOS in your `config.sys` file.
+The driver to use depends on your SCSI host adapter. Note that some driver versions
+are known to cause problems currently. Please report any you discover as bugs.
 
 Copy the `SCSITB.EXE` file to your computer with the emulated SCSI device installed.
 Ideally, place it in a directory on your PATH, for easy access.
@@ -127,12 +129,11 @@ C:\> dir d:
 [...]
 ```
 
-_**BEWARE:** As of May 11, 2024, current versions of both BlueSCSI and ZuluSCSI firmware
-have a bug with CD image changing. They do not report the media change correctly to the OS,
-which will confuse MSCDEX/SHSUCDX, and cause all access to that drive to be weird or fail
-until the next reboot. Look out for updated firmware versions that fix this bug._
+_**BEWARE:** BlueSCSI releases before 2024.05.21, and ZuluSCSI releases before
+2024.05.17, do not report the media change correctly, and will confuse the CD-ROM
+device driver. Make sure to use an updated firmware to avoid these issues._
 
-_**Note:** As of May 11, 2024, BlueSCSCI and ZuluSCSI only support changing mounted
+_**Note:** As of June 4, 2024, BlueSCSCI and ZuluSCSI only support changing mounted
 image on CD-ROM drives. There are plans to support changing images for other device
 types, but not any release dates yet._
 
