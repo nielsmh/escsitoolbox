@@ -192,37 +192,6 @@ ScsiCommand far * Device::PrepareCommand(unsigned char cdbsize, unsigned long bu
     return new DosScsiCommand(this, cdbsize, bufsize, flags);
 }
 
-const char *GetDeviceTypeName(int device_type)
-{
-    static char unknown_buffer[10];
-    
-    switch (device_type) {
-        case DTYPE_DASD:
-            return "Disk";
-        case DTYPE_SEQD:
-            return "Tape";
-        case DTYPE_PRNT:
-            return "Printer";
-        case DTYPE_PROC:
-            return "Processor";
-        case DTYPE_WORM:
-            return "WORM";
-        case DTYPE_CDROM:
-            return "CD-ROM";
-        case DTYPE_SCAN:
-            return "Scanner";
-        case DTYPE_OPTI:
-            return "Optical";
-        case DTYPE_JUKE:
-            return "Jukebox";
-        case DTYPE_COMM:
-            return "Comms";
-        default:
-            sprintf(unknown_buffer, "Unk (%d)", device_type);
-            return unknown_buffer;
-    }
-}
-
 void PrintSense(const SENSE_DATA_FMT far *s)
 {
     printf("SENSE: err=%02x seg=%02x key=%02x info=%02x%02x%02x%02x addlen=%02x\n",

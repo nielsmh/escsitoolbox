@@ -46,6 +46,7 @@ struct Device {
     unsigned char target_id;
     unsigned char lun;
 
+    /* Prepare a ScsiCommand object, this function has different implementations depending on build target */
     ScsiCommand far *PrepareCommand(unsigned char cdbsize, unsigned long bufsize, unsigned char flags) const;
 };
 
