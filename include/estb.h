@@ -51,10 +51,12 @@ struct Device {
 };
 
 struct DeviceInquiryResult {
-    char vendor[20];
+    char vendor[10];
     char product[20];
     char rev[8];
     char vinfo[24];
+    char removable_media_flag;
+    char toolbox_flag;
 };
 
 struct ScsiCommand {

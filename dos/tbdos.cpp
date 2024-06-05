@@ -37,8 +37,8 @@ static int DoDeviceInfo(int argc, const char *argv[])
     if (r) return r;
 
     printf(
-        "Name   Type       Manufacturer         Model                Adapter           \n"
-        "------------------------------------------------------------------------------\n"
+        "Addr   Vendor   Model            Type       Adapter           \n"
+        "--------------------------------------------------------------\n"
     );
 
     for (dev_id = 0; dev_id < _devices.size(); dev_id++) {
@@ -46,11 +46,11 @@ static int DoDeviceInfo(int argc, const char *argv[])
         if (r) {
             errors++;
         }
-        printf("%-6s %-10s %-20s %-20s %-18s\n",
+        printf("%-6s %-8s %-16s %-10s %-18s\n",
             _devices[dev_id].name,
-            GetDeviceTypeName(_devices[dev_id].devtype),
             di.vendor,
             di.product,
+            GetDeviceTypeName(_devices[dev_id].devtype),
             _adapters[_devices[dev_id].adapter_id].adapter_id
             );
     }

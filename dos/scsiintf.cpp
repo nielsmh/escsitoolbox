@@ -175,16 +175,18 @@ int InitSCSI()
 
 int DeviceInquiry(const Device &dev, DeviceInquiryResult *res)
 {
+    const int alloclen = 255;
+
     memset(res, 0, sizeof(*res));
 
-    ScsiCommand *cmd = dev.PrepareCommand(6, 56, SRB_DIR_IN | SRB_DIR_SCSI);
+    ScsiCommand *cmd = dev.PrepareCommand(6, alloclen, SRB_DIR_IN | SRB_DIR_SCSI);
     
     cmd->cdb[0] = SCSI_INQUIRY;
-    cmd->cdb[1] = 0;
-    cmd->cdb[2] = 0;
-    cmd->cdb[3] = 0;
-    cmd->cdb[4] = 56;
-    cmd->cdb[5] = 0;
+    cmd->cdb[1] = 0;        // bit 0 = vital product data flag
+    cmd->cdb[2] = 0;        // page code
+    cmd->cdb[3] = 0;        // reserved
+    cmd->cdb[4] = alloclen; // allocation length
+    cmd->cdb[5] = 0;        // control field
 
     switch (cmd->Execute()) {
         case SS_COMP:
@@ -198,10 +200,21 @@ int DeviceInquiry(const Device &dev, DeviceInquiryResult *res)
             return 0;
     }
 
-    strncpy(res->vendor, (char *)cmd->data_buf+8, 16);
+    res->removable_media_flag = (cmd->data_buf[1] & 0x80) != 0;
+    res->toolbox_flag = 0;
+
+    strncpy(res->vendor, (char *)cmd->data_buf+8, 8);
     strncpy(res->product, (char *)cmd->data_buf+16, 16);
     strncpy(res->rev, (char *)cmd->data_buf+32, 4);
     strncpy(res->vinfo, (char *)cmd->data_buf+36, 20);
+
+    if (strncmp(res->vinfo, "BlueSCSI", 8) == 0) {
+        // TODO: compare revision number
+        res->toolbox_flag = 1;
+    } else if (strncmp(res->vinfo, "ZuluSCSI", 0) == 0) {
+        // TODO: compare revision number
+        res->toolbox_flag = 1;
+    }
 
     delete cmd;
 
