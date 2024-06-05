@@ -18,6 +18,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **/
 
+#ifndef TOOLBOX_H
+#define TOOLBOX_H
 
 typedef struct {
     unsigned char index;   /* byte 00: file index in directory */
@@ -155,3 +157,4 @@ typedef struct {
 
 #define OPEN_RETRO_SCSI_TOO_MANY_FILES  0x0001
 
+#endif /* TOOLBOX_H */

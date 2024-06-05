@@ -1,12 +1,12 @@
 CXXFLAGS=-w4 -e25 -zq -od -of -d0 -bt=dos -fo=.obj -mc -xs -xr
 
-dos_objects = tbdos.obj aspiintf.obj scsiintf.obj
+dos_objects = tbdos.obj aspiintf.obj scsiintf.obj toolbox.obj
 win_objects = tbwin.obj
 win_resources = tbwin.res
 dos_exe = scsitb.exe
 win_exe = scsitbw.exe
 
-.cpp: dos\;win\
+.cpp: dos\;win\;shared\
 
 .cpp.obj: .AUTODEPEND
 	wcl -c -cc++ -q $(CXXFLAGS) $[*

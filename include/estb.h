@@ -22,8 +22,9 @@
 
 #include <vector>
 
-#include "../include/aspi.h"
-#include "../include/scsidefs.h"
+#include "aspi.h"
+#include "scsidefs.h"
+#include "toolbox.h"
 
 
 struct Adapter {
@@ -90,6 +91,12 @@ int InitASPI(void);
 const char *GetDeviceTypeName(int device_type);
 
 void PrintSense(const SENSE_DATA_FMT far *s);
+
+bool ToolboxGetImageList(const Device &dev, std::vector<ToolboxFileEntry> &images);
+bool ToolboxSetImage(const Device &dev, int newimage);
+bool ToolboxGetSharedDirList(const Device &dev, std::vector<ToolboxFileEntry> &images);
+int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockindex, unsigned char databuf[]);
+
 
 #endif /* ESTB_H */
 
