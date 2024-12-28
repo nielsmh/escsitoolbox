@@ -180,7 +180,7 @@ bool ToolboxGetSharedDirList(const Device &dev, std::vector<ToolboxFileEntry> &i
 
 int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockindex, unsigned char databuf[])
 {
-    const unsigned int BUFSIZE = 4096;
+    const int BUFSIZE = 4096;
     
     ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_IN | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);
     if (cmd == NULL) return -1;
@@ -205,7 +205,7 @@ int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockind
             return -1;
     }
 
-    unsigned long transferred = BUFSIZE - cmd->GetBufSize();
+    int transferred = BUFSIZE - cmd->GetBufSize();
     if (transferred > BUFSIZE) {
         fprintf(stderr, "Unexpected large transfer received?! %ld bytes\n", transferred);
         return -1;

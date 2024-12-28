@@ -47,7 +47,7 @@ struct Device {
     unsigned char lun;
 
     /* Prepare a ScsiCommand object, this function has different implementations depending on build target */
-    ScsiCommand far *PrepareCommand(unsigned char cdbsize, unsigned long bufsize, unsigned char flags) const;
+    ScsiCommand far *PrepareCommand(unsigned char cdbsize, int bufsize, unsigned char flags) const;
 };
 
 struct DeviceInquiryResult {
@@ -64,7 +64,7 @@ struct ScsiCommand {
     unsigned char far *cdb;
     const Device far *device;
     
-    virtual unsigned long GetBufSize() const = 0;
+    virtual int GetBufSize() const = 0;
     virtual unsigned char GetCDBSize() const = 0;
     virtual unsigned char GetStatus() const = 0;
     virtual unsigned char GetFlags() const = 0;
