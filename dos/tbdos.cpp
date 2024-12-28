@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
 
 #include "../include/aspi.h"
 #include "../include/scsidefs.h"
@@ -27,48 +28,74 @@
 #include "../include/estb.h"
 
 
+static char LETTERS[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+struct FoundToolboxDevice {
+    unsigned char adapter_id;
+    char name;
+    ToolboxDeviceList tdl;
+
+    FoundToolboxDevice() {
+        adapter_id = 0xFF;
+        name = ' ';
+        memset(tdl.device_type, TOOLBOX_DEVTYPE_NONE, sizeof(tdl.device_type));
+    }
+};
+
 static int DoDeviceInfo(int argc, const char *argv[])
 {
     int r = InitSCSI();
     int dev_id;
     int errors = 0;
     DeviceInquiryResult di;
-    ToolboxDeviceList tdl;
+    std::vector<FoundToolboxDevice> tbdevs;
 
     if (r) return r;
 
+    tbdevs.reserve(_devices.size());
+
     printf(
-        "Addr   Vendor   Model            Type       Adapter            Emulation \n"
-        "-------------------------------------------------------------------------\n"
+        "Addr   Vendor   Model            Type       Adapter            Emulation Dev\n"
+        "----------------------------------------------------------------------------\n"
     );
 
     for (dev_id = 0; dev_id < _devices.size(); dev_id++) {
+        // Query the device details
         Device &dev = _devices[dev_id];
         r = DeviceInquiry(dev, &di);
         if (r) {
             errors++;
         }
-        bool has_toolbox = ToolboxListDevices(dev, tdl);
-        printf("%-6s %-8s %-16s %-10s %-18s %-10s\n",
+
+        // Check for toolbox support status
+        FoundToolboxDevice *tbdev = NULL;
+        for (int tbdevid = 0; tbdevid < tbdevs.size(); tbdevid++) {
+            if (tbdevs[tbdevid].adapter_id != dev.adapter_id) continue;
+            if (tbdevs[tbdevid].tdl.device_type[dev.target_id] == TOOLBOX_DEVTYPE_NONE) continue;
+            tbdev = &tbdevs[tbdevid];
+            break;
+        }
+        if (tbdev != NULL) {
+            FoundToolboxDevice newtbdev;
+            bool has_toolbox = ToolboxListDevices(dev, newtbdev.tdl);
+            if (has_toolbox) {
+                newtbdev.adapter_id = dev.adapter_id;
+                newtbdev.name = LETTERS[tbdevs.size()];
+                tbdevs.push_back(newtbdev);
+                tbdev = &tbdevs.back();
+            }
+        }
+
+        // Print out the device details
+        printf("%-6s %-8s %-16s %-10s %-18s %-10s %c \n",
             dev.name,
             di.vendor,
             di.product,
             GetDeviceTypeName(dev.devtype),
             _adapters[dev.adapter_id].adapter_id,
-            has_toolbox ? GetToolboxDeviceTypeName(tdl.device_type[dev.target_id]) : ""
+            tbdev ? GetToolboxDeviceTypeName(tbdev->tdl.device_type[dev.target_id]) : "",
+            tbdev ? tbdev->name : ' '
             );
-        if (has_toolbox) {
-            printf("Toolbox devices: %02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x\n",
-                tdl.device_type[0],
-                tdl.device_type[1],
-                tdl.device_type[2],
-                tdl.device_type[3],
-                tdl.device_type[4],
-                tdl.device_type[5],
-                tdl.device_type[6],
-                tdl.device_type[7]
-                );
-        }
     }
     
     return 0;
