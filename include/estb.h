@@ -72,7 +72,7 @@ struct ScsiCommand {
     virtual unsigned char GetTargetStatus() const = 0;
     virtual const SENSE_DATA_FMT far *GetSenseData() const = 0;
 
-    virtual unsigned char Execute();
+    virtual unsigned short Execute();
     
     virtual ~ScsiCommand() { }
 };

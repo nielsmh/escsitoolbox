@@ -155,7 +155,7 @@ struct DosScsiCommand : public ScsiCommand {
         srb6.SRB_SenseLen = SENSE_LEN;
     }
 
-    virtual unsigned char Execute()
+    virtual unsigned short Execute()
     {
         return SendASPICommand(&srb6);
     }
