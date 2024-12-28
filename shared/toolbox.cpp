@@ -236,6 +236,8 @@ bool ToolboxListDevices(const Device &dev, ToolboxDeviceList &devlist)
     }
 
     memcpy(&devlist, cmd->data_buf, sizeof(devlist));
+    
+    delete cmd;
     return true;
 }
 
