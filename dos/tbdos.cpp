@@ -78,7 +78,7 @@ static int DoDeviceInfo(int argc, const char *argv[])
             tbdev = &tbdevs[tbdevid];
             break;
         }
-        if (tbdev != NULL) {
+        if (tbdev == NULL) {
             FoundToolboxDevice newtbdev;
             bool has_toolbox = ToolboxListDevices(dev, newtbdev.tdl);
             if (has_toolbox) {
