@@ -211,7 +211,7 @@ int DeviceInquiry(const Device &dev, DeviceInquiryResult *res)
     if (strncmp(res->vinfo, "BlueSCSI", 8) == 0) {
         // TODO: compare revision number
         res->toolbox_flag = 1;
-    } else if (strncmp(res->vinfo, "ZuluSCSI", 0) == 0) {
+    } else if (strncmp(res->vinfo, "ZuluSCSI", 8) == 0) {
         // TODO: compare revision number
         res->toolbox_flag = 1;
     }
