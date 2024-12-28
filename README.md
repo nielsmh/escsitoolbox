@@ -35,7 +35,7 @@ Not started:
 ## Usage (DOS)
 
 Make sure your BlueSCSI or ZuluSCSI device is running a firmware version with
-Toolbox support. For ZuluSCSI youj also need to make sure the Toolbox is
+Toolbox support. For ZuluSCSI you also need to make sure the Toolbox is
 enabled in your config file:
 ```
 [SCSI]
@@ -46,6 +46,9 @@ EnableToolbox = 1
 Make sure you have installed an appropriate ASPI driver for DOS in your `config.sys` file.
 The driver to use depends on your SCSI host adapter. Note that some driver versions
 are known to cause problems currently. Please report any you discover as bugs.
+
+The DOS version also appears to work in MS-DOS Prompt under Windows 9x/Me,
+where Windows will provide ASPI services instead of using a real-mode DOS driver.
 
 Copy the `SCSITB.EXE` file to your computer with the emulated SCSI device installed.
 Ideally, place it in a directory on your PATH, for easy access.
@@ -209,9 +212,11 @@ the device is properly reset and does not have unexpected open files._
 Currently this project is developed with Open Watcom C 1.9,
 and is not tested with any other compilers/toolchains.
 
-Testing is currently only done with an Adaptec AIC-7870 (AHA-2940) host controller
-and a ZuluSCSI RP2040 running `v2024.04.01` firmware with the patches in
-[PR #420](https://github.com/ZuluSCSI/ZuluSCSI-firmware/pull/420).
+Testing is currently primarily done with an Adaptec AIC-7870 (AHA-2940) host adapter,
+using ZuluSCSI RP2040 and BlueSCSI v2 devices, running recent firmware versions.
+
+Testing with SCSI adapters from other manufacturers has so far caused problems,
+and only ASPI managers from Adaptec and Microsoft (Windows 9x) work correctly.
 
 ## License
 
