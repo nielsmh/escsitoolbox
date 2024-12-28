@@ -189,12 +189,12 @@ scsitb get <device> <fileindex> [filename]
 
 Copies a file from the shared directory on the SD card onto your computer.
 
-You can specify the destination filename, but if you leave it out the original
+You can specify the destination filename, but if you leave it out, the original
 filename will be used.
 
-_**Careful:** If the filename on the SD card is not DOS compatible (too long,
-or illegal characters) the transfer might fail or give unexepected results.
-In that case, specify the destination filename._
+_**Note:** The tool will attempt to clean up filenames to be DOS compatible,
+but if you have files with long names, or unusual characters, it may still be
+a good idea to specify the destination filename yourself regardless._
 
 _**Careful:** Make sure your destination disk has enough free space for the
 file you download._

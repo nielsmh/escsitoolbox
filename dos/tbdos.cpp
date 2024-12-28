@@ -217,6 +217,53 @@ static int DoListSharedDir(int argc, const char *argv[])
 }
 
 
+static void CleanFileName(char *dstfn, const char *srcfn, int srclen)
+{
+    int tmplen = strlen(srcfn);
+    if (tmplen < srclen) srclen = tmplen;
+
+    int baselen = 0;
+    char *extstart = NULL;
+    int extlen = 0;
+    for (; *srcfn != '\0'; ++srcfn) {
+        char c = *srcfn;
+        if (srclen-- <= 0) break;
+        // Check for various illegal characters and skip them
+        if (c < ' ') continue;
+        if (c == '/') continue;
+        if (c == '\\') continue;
+        if (c == '<') continue;
+        if (c == '>') continue;
+        if (c == '|') continue;
+        if (c == '*') continue;
+        if (c == '?') continue;
+        if (c == ' ') continue;
+        // Check for period to start the extension
+        if (c == '.') {
+            // Except if there is no base filename yet
+            if (baselen == 0) continue;
+            // If there is no extension yet, capture the extension start location
+            if (extstart == NULL) extstart = dstfn;
+            // Otherwise reset to the extension start location
+            else dstfn = extstart;
+            // Extension is now 0 characters
+            extlen = 0;
+            *dstfn = '\0';
+        }
+        // Now write the character, if there is room
+        if (extstart == NULL && baselen < 8) {
+            *dstfn++ = c;
+            baselen++;
+        } else if (extstart != NULL && extlen < 4) {
+            *dstfn++ = c;
+            extlen++;
+        }
+    }
+    // Ensure terminator
+    *dstfn = '\0';
+    // TODO: check for device name clashes? like CON, PRN, LPTx, COMx, AUX, NUL
+}
+
 static int DoGetSharedDirFile(int argc, const char *argv[])
 {
     char outfn[128] = "";
@@ -262,8 +309,7 @@ static int DoGetSharedDirFile(int argc, const char *argv[])
     }
 
     if (outfn[0] == '\0') {
-        strncpy(outfn, tfe->name, sizeof(outfn));
-        // FIXME: should clean up the name to be DOS compatible
+        CleanFileName(outfn, tfe->name, sizeof(tfe->name));
     }
 
     printf("Output file: %s\n", outfn);
