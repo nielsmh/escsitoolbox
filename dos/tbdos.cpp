@@ -50,6 +50,9 @@ static int DoDeviceInfo(int argc, const char *argv[])
     DeviceInquiryResult di;
     std::vector<FoundToolboxDevice> tbdevs;
 
+    (void)argc; // unused parameter
+    (void)argv; // unused parameter
+
     if (r) return r;
 
     tbdevs.reserve(_devices.size());
@@ -133,6 +136,8 @@ static int DoListImages(int argc, const char *argv[])
 {
     int r = InitSCSI();
 
+    (void)argc; // unused parameter
+
     if (r) return r;
 
     const Device *dev = GetDeviceByName(argv[0]);
@@ -160,6 +165,8 @@ static int DoSetImage(int argc, const char *argv[])
     int r = InitSCSI();
     int newimage = -1;
 
+    (void)argc; // unused parameter
+
     if (r) return r;
 
     const Device *dev = GetDeviceByName(argv[0]);
@@ -185,6 +192,8 @@ static int DoSetImage(int argc, const char *argv[])
 static int DoListSharedDir(int argc, const char *argv[])
 {
     int r = InitSCSI();
+
+    (void)argc; // unused parameter
 
     if (r) return r;
 
