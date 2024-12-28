@@ -112,7 +112,7 @@ static int QueryDevice(int adapter_id, int device_id, int lun, int *device_type)
             /* skip */
             return 0;
         default:
-            fprintf(stderr, "Return from SC_GET_DEV_TYPE was %d\n", devblock.SRB_Status);
+            fprintf(stderr, "Return from SC_GET_DEV_TYPE(%d:%d:%d) was %d\n", adapter_id, device_id, lun, devblock.SRB_Status);
             return -1;
     }
 }
