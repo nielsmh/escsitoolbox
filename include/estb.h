@@ -92,6 +92,7 @@ unsigned short far SendASPICommand(void far *pSrb);
 int InitASPI(void);
 
 const char *GetDeviceTypeName(int device_type);
+const char *GetToolboxDeviceTypeName(char toolbox_devtype);
 
 void PrintSense(const SENSE_DATA_FMT far *s);
 
@@ -99,6 +100,7 @@ bool ToolboxGetImageList(const Device &dev, std::vector<ToolboxFileEntry> &image
 bool ToolboxSetImage(const Device &dev, int newimage);
 bool ToolboxGetSharedDirList(const Device &dev, std::vector<ToolboxFileEntry> &images);
 int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockindex, unsigned char databuf[]);
+bool ToolboxListDevices(const Device &dev, ToolboxDeviceList &devlist);
 
 
 #endif /* ESTB_H */

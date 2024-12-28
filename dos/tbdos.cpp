@@ -33,26 +33,42 @@ static int DoDeviceInfo(int argc, const char *argv[])
     int dev_id;
     int errors = 0;
     DeviceInquiryResult di;
+    ToolboxDeviceList tdl;
 
     if (r) return r;
 
     printf(
-        "Addr   Vendor   Model            Type       Adapter           \n"
-        "--------------------------------------------------------------\n"
+        "Addr   Vendor   Model            Type       Adapter            Emulation \n"
+        "-------------------------------------------------------------------------\n"
     );
 
     for (dev_id = 0; dev_id < _devices.size(); dev_id++) {
-        r = DeviceInquiry(_devices[dev_id], &di);
+        Device &dev = _devices[dev_id];
+        r = DeviceInquiry(dev, &di);
         if (r) {
             errors++;
         }
-        printf("%-6s %-8s %-16s %-10s %-18s\n",
-            _devices[dev_id].name,
+        bool has_toolbox = ToolboxListDevices(dev, tdl);
+        printf("%-6s %-8s %-16s %-10s %-18s %-10s\n",
+            dev.name,
             di.vendor,
             di.product,
-            GetDeviceTypeName(_devices[dev_id].devtype),
-            _adapters[_devices[dev_id].adapter_id].adapter_id
+            GetDeviceTypeName(dev.devtype),
+            _adapters[dev.adapter_id].adapter_id,
+            has_toolbox ? GetToolboxDeviceTypeName(tdl.device_type[dev.target_id]) : ""
             );
+        if (has_toolbox) {
+            printf("Toolbox devices: %02x.%02x.%02x.%02x.%02x.%02x.%02x.%02x\n",
+                tdl.device_type[0],
+                tdl.device_type[1],
+                tdl.device_type[2],
+                tdl.device_type[3],
+                tdl.device_type[4],
+                tdl.device_type[5],
+                tdl.device_type[6],
+                tdl.device_type[7]
+                );
+        }
     }
     
     return 0;

@@ -217,3 +217,50 @@ int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockind
     delete cmd;
     return transferred;
 }
+
+bool ToolboxListDevices(const Device &dev, ToolboxDeviceList &devlist)
+{
+    ScsiCommand *cmd = dev.PrepareCommand(10, sizeof(devlist), SRB_DIR_IN | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);
+    if (cmd == NULL) return -1;
+
+    cmd->cdb[0] = TOOLBOX_LIST_DEVICES;
+
+    switch (cmd->Execute()) {
+        case SS_COMP:
+            break;
+        case SS_PENDING:
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_LIST_DEVICES", dev.name);
+            return false;
+        default:
+            return false;
+    }
+
+    memcpy(&devlist, cmd->data_buf, sizeof(devlist));
+    return true;
+}
+
+const char *GetToolboxDeviceTypeName(char toolbox_devtype)
+{
+    switch (toolbox_devtype) {
+	    case TOOLBOX_DEVTYPE_FIXED:
+            return "Fixed";
+	    case TOOLBOX_DEVTYPE_REMOVEABLE:
+            return "Removable";
+	    case TOOLBOX_DEVTYPE_OPTICAL:
+            return "Optical";
+	    case TOOLBOX_DEVTYPE_FLOPPY_14MB:
+            return "Floppy";
+	    case TOOLBOX_DEVTYPE_MO:
+            return "MO";
+	    case TOOLBOX_DEVTYPE_SEQUENTIAL:
+            return "Tape";
+	    case TOOLBOX_DEVTYPE_NETWORK:
+            return "Network";
+	    case TOOLBOX_DEVTYPE_ZIP100:
+            return "Zip100";
+        case TOOLBOX_DEVTYPE_NONE:
+            return NULL;
+        default:
+            return "Unknown";
+    }
+}

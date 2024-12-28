@@ -37,6 +37,23 @@ typedef struct {
     }
 } ToolboxFileEntry;
 
+typedef struct {
+    char device_type[8];
+} ToolboxDeviceList;
+
+enum ToolboxDeviceType {
+	TOOLBOX_DEVTYPE_FIXED = 0,
+	TOOLBOX_DEVTYPE_REMOVEABLE,
+	TOOLBOX_DEVTYPE_OPTICAL,
+	TOOLBOX_DEVTYPE_FLOPPY_14MB,
+	TOOLBOX_DEVTYPE_MO,
+	TOOLBOX_DEVTYPE_SEQUENTIAL,
+	TOOLBOX_DEVTYPE_NETWORK,
+	TOOLBOX_DEVTYPE_ZIP100,
+    
+    TOOLBOX_DEVTYPE_NONE = 0xFF,
+};
+
 
 /** TOOLBOX_LIST_FILES (read, length 10)
  * Input:
