@@ -31,6 +31,7 @@ Not working:
 Not started:
 - Upload files to shared directory
 - Windows versions of the software
+  (lower priority, since the DOS version works under both Windows 3.x and 9x)
 
 ## Usage (DOS)
 
@@ -62,28 +63,34 @@ Verify you can run the tool by typing the command: `scsitb help`.
 scsitb info
 ```
 
-This searches for installed SCSI devices and prints their names to the screen.
+This searches for installed SCSI devices and prints their addresses to the screen.
 The output will look something like this:
 
 ```
 C:\> scsitb info
-Name   Type       Manufacturer         Model                Adapter           
-------------------------------------------------------------------------------
-0:0:0  Disk       ZULUSCSIHARDDRIV     HARDDRIVE            ADAPTEC AIC-7870
-0:1:0  CD-ROM     ZULUSCSICDROM        CDROM                ADAPTEC AIC-7870
+Addr   Vendor   Model            Type       Adapter            Emulation Dev
+----------------------------------------------------------------------------
+0:0:0  QUANTUM  BlueSCSI Pico    Disk       ADAPTEC AIC-7870   Fixed      A
+0:1:0  BlueSCSI CD-ROM CDU-55S   CD-ROM     ADAPTEC AIC-7870   Optical    A
 ```
 
-The names are three-part: Host adapter ID, Target ID, Logical Unit Number (LUN).
-When any of the other commands require you to enter a device name,
+The device address is three-part: Host adapter ID, Target ID, Logical Unit Number (LUN).
+When any of the other commands require you to enter a device address,
 it is these names you need to enter.
 
-You can shorten names: If you are addressing LUN 0 on a device,
-you can leave out the LUN, so the two above device names can also be shortened to
+You can shorten addresses: If you are addressing LUN 0 on a device,
+you can leave out the LUN, so the two above device addresses can also be shortened to
 `0:0` and `0:1`.
 For devices with LUN 0 on host adapter 0, you can leave out both parts,
 so the above two can also be shortened to simply `0` and `1`.
-That is, if both the first and last number in a name is zero,
+That is, if both the first and last number in an address are zero,
 you only need to use the middle number.
+
+The Emulation and Dev columns are only filled for SCSI devices with Toolbox support.
+In the Emulation column is shown which type of device is being emulated.
+The Dev column indicates which physical hardware device a logical device belongs to,
+such that when one physical BlueSCSI or ZuluSCSI device emulates multiple logical devices,
+they will all show the same letter under Dev.
 
 ### List disk images (for CD-ROM etc.)
 
@@ -142,7 +149,8 @@ types, but not any release dates yet._
 
 ### List shared directory on SD card
 
-Create a directory named `shared` in the root of your SD card to use this feature.
+To use this feature,
+you must first create a directory named `shared` in the root of your SD card.
 (Also see the documentation for your device firmware, this can be configured further.)
 
 ```
