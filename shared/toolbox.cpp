@@ -220,6 +220,95 @@ int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockind
     return transferred;
 }
 
+bool ToolboxSendFileBegin(const Device &dev, const char far *filename)
+{
+    const int BUFSIZE = 33;
+    
+    ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_OUT | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);
+    if (cmd == NULL) return -1;
+
+    cmd->cdb[0] = TOOLBOX_SEND_FILE_PREP;
+
+    _fstrncpy((char far *)cmd->data_buf, filename, BUFSIZE);
+
+    switch (cmd->Execute()) {
+        case SS_COMP:
+            break;
+        case SS_PENDING:
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_SEND_FILE_PREP", dev.name);
+            return false;
+        default:
+            fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_SEND_FILE_PREP was %#x, %#x, %#x\n",
+                dev.name, cmd->GetStatus(), cmd->GetHAStatus(), cmd->GetTargetStatus());
+            PrintSense(cmd->GetSenseData());
+            return false;
+    }
+
+    delete cmd;
+    return true;
+}
+
+bool ToolboxSendFileBlock(const Device &dev, unsigned short data_size, unsigned long block_index, const char far *data)
+{
+    const int BUFSIZE = 512;
+
+    if (data_size > BUFSIZE) fprintf(stderr, "Illegal data_size\n"), abort();
+    if (block_index >> 24 > 0) fprintf(stderr, "Illegal block_index\n"), abort();
+
+    ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_OUT | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);
+    if (cmd == NULL) return -1;
+
+    cmd->cdb[0] = TOOLBOX_SEND_FILE_10;
+    cmd->cdb[1] = (unsigned char)(data_size   >>  8) & 0xFF;
+    cmd->cdb[2] = (unsigned char)(data_size        ) & 0xFF;
+    cmd->cdb[3] = (unsigned char)(block_index >> 16) & 0xFF;
+    cmd->cdb[4] = (unsigned char)(block_index >>  8) & 0xFF;
+    cmd->cdb[5] = (unsigned char)(block_index      ) & 0xFF;
+    _fmemcpy(cmd->data_buf, data, data_size);
+
+    switch (cmd->Execute()) {
+        case SS_COMP:
+            break;
+        case SS_PENDING:
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_SEND_FILE_10", dev.name);
+            return false;
+        default:
+            fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_SEND_FILE_10 was %#x, %#x, %#x\n",
+                dev.name, cmd->GetStatus(), cmd->GetHAStatus(), cmd->GetTargetStatus());
+            PrintSense(cmd->GetSenseData());
+            return false;
+    }
+
+    delete cmd;
+    return true;
+}
+
+bool ToolboxSendFileEnd(const Device &dev)
+{
+    const int BUFSIZE = 4;
+    
+    ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_OUT | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);
+    if (cmd == NULL) return -1;
+
+    cmd->cdb[0] = TOOLBOX_SEND_FILE_END;
+
+    switch (cmd->Execute()) {
+        case SS_COMP:
+            break;
+        case SS_PENDING:
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_SEND_FILE_END", dev.name);
+            return false;
+        default:
+            fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_SEND_FILE_END was %#x, %#x, %#x\n",
+                dev.name, cmd->GetStatus(), cmd->GetHAStatus(), cmd->GetTargetStatus());
+            PrintSense(cmd->GetSenseData());
+            return false;
+    }
+
+    delete cmd;
+    return true;
+}
+
 bool ToolboxListDevices(const Device &dev, ToolboxDeviceList &devlist)
 {
     ScsiCommand *cmd = dev.PrepareCommand(10, sizeof(devlist), SRB_DIR_IN | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);

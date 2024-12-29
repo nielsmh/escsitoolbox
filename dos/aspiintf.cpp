@@ -48,6 +48,15 @@ static void Spinner(void) {
     spin = (spin + 1) & 3;
 }
 
+static void DumpBytes(BYTE far *b, unsigned long count)
+{
+    printf("%lu bytes:\n", count);
+    for (; count > 0; count--) {
+        printf("%02x", *b++);
+    }
+    printf("\n");
+}
+
 
 static clock_t WAITSTEP = CLOCKS_PER_SEC / 4;
 static int TIMEOUT = 40;
@@ -144,7 +153,7 @@ struct DosScsiCommand : public ScsiCommand {
         if (bufsize < 0) abort();
         
         data_buf = new unsigned char[bufsize];
-        memset(data_buf, 0, bufsize);
+        _fmemset(data_buf, 0, bufsize);
         device = dev;
         
         srb6.SRB_Cmd = SC_EXEC_SCSI_CMD;
@@ -159,6 +168,8 @@ struct DosScsiCommand : public ScsiCommand {
 
     virtual unsigned short Execute()
     {
+        //DumpBytes((BYTE far *)(void far *)&srb6, sizeof(srb6) - 6 + GetCDBSize());
+        //DumpBytes((BYTE far *)(void far *)data_buf, GetBufSize());
         return SendASPICommand(&srb6);
     }
     

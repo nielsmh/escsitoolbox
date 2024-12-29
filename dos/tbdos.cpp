@@ -18,8 +18,10 @@
 **/
 
 #include <stdio.h>
+#include <io.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h> 
 #include <wcvector.h>
 
 #include "../include/aspi.h"
@@ -390,6 +392,92 @@ static int DoGetSharedDirFile(int argc, const char *argv[])
     return 0;
 }
 
+static int DoPutSharedDirFile(int argc, const char *argv[])
+{
+    int r = InitSCSI();
+
+    (void)argc; // unused parameter
+
+    if (r) return r;
+
+    const Device *dev = GetDeviceByName(argv[0]);
+    if (!dev) {
+        fprintf(stderr, "Device ID not found: %s\n", argv[0]);
+        return 16;
+    }
+
+    const char *inpfn = argv[1];
+    const char *outfn = basename(strdup(inpfn)); // assume DOS will clean up the memory on exit
+
+    FILE *infile = fopen(inpfn, "rb");
+    if (infile == NULL) {
+        fprintf(stderr, "The source file could not be opened for reading.\n");
+        return 1;
+    }
+
+    printf("Verifying destination device %s type %d (%s)...\n",
+        dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
+
+    WCValOrderedVector<ToolboxFileEntry> files;
+    if (!ToolboxGetSharedDirList(*dev, files)) {
+        fclose(infile);
+        return 16;
+    }
+
+    for (int i = 0; i < files.entries(); i++)  {
+        if (stricmp(outfn, files[i].name) == 0) {
+            fprintf(stderr, "Destination filename: %s\n", outfn);
+            if (!AskForConfirmation("The destination already contains a file with this name. Overwrite?")) {
+                fclose(infile);
+                return 2;
+            }
+        }
+    }
+
+    if (!ToolboxSendFileBegin(*dev, outfn)) {
+        fclose(infile);
+        return 17;
+    }
+
+    const unsigned short BUFSIZE = 512;
+    char *buf = new char[BUFSIZE];
+    unsigned long block_index = 0;
+    unsigned long num_blocks = filelength(infile->_handle) / BUFSIZE;
+    int error_status = 0;
+
+    printf("Begin sending: %s => %s\n", inpfn, outfn);
+
+    while (!feof(infile)) {
+        if (ferror(infile)) {
+            fprintf(stderr, "Error reading file, aborting transfer.\n");
+            error_status = 3;
+            break;
+        }
+        unsigned short data_size = fread(buf, BUFSIZE, 1, infile);
+        if (data_size > 0) {
+            if (!ToolboxSendFileBlock(*dev, data_size, block_index, buf)) {
+                error_status = 18;
+                break;
+            }
+        }
+        printf("  Sent blocks: %6lu / %lu\r", block_index, num_blocks);
+    }
+    printf("  Finished sending %lu blocks            \n");
+    delete[] buf;
+
+    if (!error_status && !ToolboxSendFileEnd(*dev)) {
+        error_status = 19;
+    }
+
+    if (error_status) {
+        fprintf(stderr, "An error occurred during the transfer, the destination file may have errors.\n");
+    }
+
+    fclose(infile);
+
+    return error_status;
+}
+
 
 static void PrintBanner(void)
 {
@@ -423,6 +511,7 @@ static void PrintHelp(void)
         "                          the image with the given index in the image list.\n"
         "  lsdir <dev>             List shared directory for the given decice.\n"
         "  get <dev> <idx> [name]  Download a file from the shared directory.\n"
+        "  put <dev> <filename>    Upload a file to the shared directory.\n"
         "\n"
         "Please see the documentation for more information about supported\n"
         "devices, how to configure your device for compatibility, etc.\n"
@@ -483,6 +572,14 @@ int main(int argc, const char *argv[])
     if (strcmpi(argv[1], "get") == 0) {
         if (argc >= 4) {
             return DoGetSharedDirFile(argc - 2, argv + 2);
+        } else {
+            missingargs = 2;
+        }
+    }
+
+    if (strcmpi(argv[1], "put") == 0) {
+        if (argc >= 4) {
+            return DoPutSharedDirFile(argc - 2, argv + 2);
         } else {
             missingargs = 2;
         }

@@ -109,6 +109,9 @@ bool ToolboxSetImage(const Device &dev, int newimage);
 bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEntry> &images);
 int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockindex, unsigned char databuf[]);
 bool ToolboxListDevices(const Device &dev, ToolboxDeviceList &devlist);
+bool ToolboxSendFileBegin(const Device &dev, const char *filename);
+bool ToolboxSendFileBlock(const Device &dev, unsigned short data_size, unsigned long block_index, const char *data);
+bool ToolboxSendFileEnd(const Device &dev);
 
 
 #endif /* ESTB_H */
