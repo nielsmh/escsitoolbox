@@ -74,10 +74,10 @@ bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry>
             return false;
     }
 
-    BYTE *buf = cmd->data_buf;
+    BYTE far *buf = cmd->data_buf;
     while (count > 0) {
         ToolboxFileEntry tfe;
-        memcpy(&tfe, buf, sizeof(tfe));
+        _fmemcpy(&tfe, buf, sizeof(tfe));
         buf += sizeof(tfe);
         if (tfe.name[0] == '\0') break;
         images.append(tfe);
@@ -163,10 +163,10 @@ bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEn
             return false;
     }
 
-    BYTE *buf = cmd->data_buf;
+    BYTE far *buf = cmd->data_buf;
     while (count > 0) {
         ToolboxFileEntry tfe;
-        memcpy(&tfe, buf, sizeof(tfe));
+        _fmemcpy(&tfe, buf, sizeof(tfe));
         buf += sizeof(tfe);
         if (tfe.name[0] == '\0') break;
         images.append(tfe);
@@ -211,7 +211,7 @@ int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockind
         return -1;
     }
     if (transferred > 0) {
-        memcpy(databuf, cmd->data_buf, transferred);
+        _fmemcpy(databuf, cmd->data_buf, transferred);
     }
 
     delete cmd;
@@ -324,7 +324,7 @@ bool ToolboxListDevices(const Device &dev, ToolboxDeviceList &devlist)
             return false;
     }
 
-    memcpy(&devlist, cmd->data_buf, sizeof(devlist));
+    _fmemcpy(&devlist, cmd->data_buf, sizeof(devlist));
     
     delete cmd;
     return true;
