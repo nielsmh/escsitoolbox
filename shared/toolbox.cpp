@@ -60,7 +60,6 @@ bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry>
     if (cmd == NULL) return false;
 
     cmd->cdb[0] = TOOLBOX_LIST_CDS;
-    memset(cmd->data_buf, 0, 4096);
 
     switch (cmd->Execute()) {
         case SS_COMP:
@@ -150,7 +149,6 @@ bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEn
     if (cmd == NULL) return false;
 
     cmd->cdb[0] = TOOLBOX_LIST_FILES;
-    memset(cmd->data_buf, 0, 4096);
 
     switch (cmd->Execute()) {
         case SS_COMP:
