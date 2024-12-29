@@ -199,9 +199,6 @@ a good idea to specify the destination filename yourself regardless._
 _**Careful:** Make sure your destination disk has enough free space for the
 file you download._
 
-_**Careful:** The tool will overwrite any destination file with the same name,
-no questions asked._
-
 ```
 C:\> scsitb get 0 1 scsitb2.zip
 Retrieving file list from device 0:0:0 type 0 (Disk)...

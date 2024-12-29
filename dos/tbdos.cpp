@@ -30,6 +30,25 @@
 
 static char LETTERS[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
+static bool AskForConfirmation(const char *question)
+{
+    fprintf(stderr, "%s (Y/N) ", question);
+    while(1) {
+        int response = getchar();
+        switch (response) {
+            case 'y':
+            case 'Y':
+                return true;
+            case 'n':
+            case 'N':
+                return false;
+            default:
+                continue;
+        }
+    }
+}
+
+
 struct FoundToolboxDevice {
     unsigned char adapter_id;
     char name;
@@ -312,9 +331,21 @@ static int DoGetSharedDirFile(int argc, const char *argv[])
         CleanFileName(outfn, tfe->name, sizeof(tfe->name));
     }
 
+    // Check if the destination file already exists
     printf("Output file: %s\n", outfn);
-    FILE *outfile = fopen(outfn, "wb");
-    if (!outfile) {
+    FILE *outfile = fopen(outfn, "rb");
+    if (outfile != NULL) {
+        fclose(outfile);
+        outfile = NULL;
+        if (!AskForConfirmation("The output file already exists. Overwrite it?")) {
+            fprintf(stderr, "Not overwriting file, aborting.\n");
+            return 4;
+        }
+    }
+
+    // Actually open for writing
+    outfile = fopen(outfn, "wb");
+    if (outfile == NULL) {
         fprintf(stderr, "Could not open output file for writing\n");
         return 2;
     }
