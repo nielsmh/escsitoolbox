@@ -82,6 +82,7 @@ bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry>
         buf += sizeof(tfe);
         if (tfe.name[0] == '\0') break;
         images.append(tfe);
+        count--;
     }
 
     delete cmd;
@@ -171,6 +172,7 @@ bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEn
         buf += sizeof(tfe);
         if (tfe.name[0] == '\0') break;
         images.append(tfe);
+        count--;
     }
 
     delete cmd;
