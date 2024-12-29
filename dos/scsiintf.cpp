@@ -24,8 +24,8 @@
 #include "../include/estb.h"
 
 
-std::vector<Adapter> _adapters;
-std::vector<Device> _devices;
+WCValOrderedVector<Adapter> _adapters;
+WCValOrderedVector<Device> _devices;
 
 
 static int GetHostAdapterInfo(void)
@@ -51,9 +51,9 @@ static int GetHostAdapterInfo(void)
         }
 
         num_adapters = host_adapter_info.HA_Count;
-        if (_adapters.empty()) {
+        if (_adapters.isEmpty()) {
             _adapters.resize(num_adapters);
-            _devices.reserve(MAX_SCSI_LUNS * num_adapters);
+            //_devices.reserve(MAX_SCSI_LUNS * num_adapters);
         }
 
         /* fill Adapter struct */
@@ -130,14 +130,13 @@ static int GetAdapterDeviceInfo(int adapter_id)
             if (r < 0) return 0;
             if (r == 0) continue;
 
-            _devices.push_back(Device());
-            Device &d = _devices.back();
-
+            Device d;
             sprintf(d.name, "%d:%d:%d", adapter_id, target_id, lun);
             d.devtype = devtype;
             d.adapter_id = adapter_id;
             d.target_id = target_id;
             d.lun = lun;
+            _devices.append(d);
             
             devsonadapter++;
         }
@@ -161,11 +160,11 @@ int InitSCSI()
         return 254;
     }
 
-    for (id = 0; id < _adapters.size(); id++) {
+    for (id = 0; id < _adapters.entries(); id++) {
         GetAdapterDeviceInfo(id);
     }
 
-    if (_devices.empty()) {
+    if (_devices.isEmpty()) {
         fprintf(stderr, "No devices found on any SCSI host adapter.\n");
         return 253;
     }    
@@ -231,7 +230,7 @@ const Device * GetDeviceByName(const char *devname)
     // support leaving out HA and LUN for LUN 0 devices on first HA
     snprintf(alt2, sizeof(alt2), "0:%s:0", devname);
     
-    for (i = 0; i < _devices.size(); i++) {
+    for (i = 0; i < _devices.entries(); i++) {
         if (strncmp(devname, _devices[i].name, sizeof(_devices[i].name)) == 0 ||
             strncmp(alt1, _devices[i].name, sizeof(_devices[i].name)) == 0 ||
             strncmp(alt2, _devices[i].name, sizeof(_devices[i].name)) == 0) {

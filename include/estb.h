@@ -20,7 +20,7 @@
 #ifndef ESTB_H
 #define ESTB_H
 
-#include <vector>
+#include <wcvector.h>
 
 #include "aspi.h"
 #include "scsidefs.h"
@@ -35,6 +35,10 @@ struct Adapter {
     unsigned char support_residual_byte_count_reporting;
     unsigned char max_targets;
     unsigned long max_transfer_length;
+
+    bool operator== (const Adapter &other) const {
+        return scsi_id == other.scsi_id;
+    }
 };
 
 struct ScsiCommand;
@@ -48,6 +52,10 @@ struct Device {
 
     /* Prepare a ScsiCommand object, this function has different implementations depending on build target */
     ScsiCommand far *PrepareCommand(unsigned char cdbsize, int bufsize, unsigned char flags) const;
+
+    bool operator== (const Device &other) const {
+        return adapter_id == other.adapter_id && target_id == other.target_id && lun == other.lun;
+    }
 };
 
 struct DeviceInquiryResult {
@@ -78,8 +86,8 @@ struct ScsiCommand {
 };
 
 
-extern std::vector<Adapter> _adapters;
-extern std::vector<Device> _devices;
+extern WCValOrderedVector<Adapter> _adapters;
+extern WCValOrderedVector<Device> _devices;
 
 int InitSCSI();
 
@@ -96,9 +104,9 @@ const char *GetToolboxDeviceTypeName(char toolbox_devtype);
 
 void PrintSense(const SENSE_DATA_FMT far *s);
 
-bool ToolboxGetImageList(const Device &dev, std::vector<ToolboxFileEntry> &images);
+bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry> &images);
 bool ToolboxSetImage(const Device &dev, int newimage);
-bool ToolboxGetSharedDirList(const Device &dev, std::vector<ToolboxFileEntry> &images);
+bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEntry> &images);
 int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockindex, unsigned char databuf[]);
 bool ToolboxListDevices(const Device &dev, ToolboxDeviceList &devlist);
 

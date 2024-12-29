@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <vector>
+#include <wcvector.h>
 
 #include "../include/aspi.h"
 #include "../include/scsidefs.h"
@@ -59,6 +59,10 @@ struct FoundToolboxDevice {
         name = ' ';
         memset(tdl.device_type, TOOLBOX_DEVTYPE_NONE, sizeof(tdl.device_type));
     }
+
+    bool operator== (const FoundToolboxDevice &other) const {
+        return adapter_id == other.adapter_id && name == other.name;
+    }
 };
 
 static int DoDeviceInfo(int argc, const char *argv[])
@@ -67,21 +71,21 @@ static int DoDeviceInfo(int argc, const char *argv[])
     int dev_id;
     int errors = 0;
     DeviceInquiryResult di;
-    std::vector<FoundToolboxDevice> tbdevs;
+    WCValOrderedVector<FoundToolboxDevice> tbdevs;
 
     (void)argc; // unused parameter
     (void)argv; // unused parameter
 
     if (r) return r;
 
-    tbdevs.reserve(_devices.size());
+    //tbdevs.reserve(_devices.size());
 
     printf(
         "Addr   Vendor   Model            Type       Adapter            Emulation Dev\n"
         "----------------------------------------------------------------------------\n"
     );
 
-    for (dev_id = 0; dev_id < _devices.size(); dev_id++) {
+    for (dev_id = 0; dev_id < _devices.entries(); dev_id++) {
         // Query the device details
         Device &dev = _devices[dev_id];
         r = DeviceInquiry(dev, &di);
@@ -91,7 +95,7 @@ static int DoDeviceInfo(int argc, const char *argv[])
 
         // Check for toolbox support status
         FoundToolboxDevice *tbdev = NULL;
-        for (int tbdevid = 0; tbdevid < tbdevs.size(); tbdevid++) {
+        for (int tbdevid = 0; tbdevid < tbdevs.entries(); tbdevid++) {
             if (tbdevs[tbdevid].adapter_id != dev.adapter_id) continue;
             if (tbdevs[tbdevid].tdl.device_type[dev.target_id] == TOOLBOX_DEVTYPE_NONE) continue;
             tbdev = &tbdevs[tbdevid];
@@ -102,9 +106,9 @@ static int DoDeviceInfo(int argc, const char *argv[])
             bool has_toolbox = ToolboxListDevices(dev, newtbdev.tdl);
             if (has_toolbox) {
                 newtbdev.adapter_id = dev.adapter_id;
-                newtbdev.name = LETTERS[tbdevs.size()];
-                tbdevs.push_back(newtbdev);
-                tbdev = &tbdevs.back();
+                newtbdev.name = LETTERS[tbdevs.entries()];
+                tbdevs.append(newtbdev);
+                tbdev = &tbdevs.last();
             }
         }
 
@@ -124,11 +128,11 @@ static int DoDeviceInfo(int argc, const char *argv[])
 }
 
 
-static void PrintFileList(const std::vector<ToolboxFileEntry> &files)
+static void PrintFileList(const WCValOrderedVector<ToolboxFileEntry> &files)
 {
-    printf("%d files found\n", files.size());
+    printf("%d files found\n", files.entries());
 
-    for (size_t i = 0; i < files.size(); i++) {
+    for (size_t i = 0; i < files.entries(); i++) {
         const ToolboxFileEntry &tfe = files[i];
         unsigned long filesize = tfe.GetSize();
         char sizestr[20];
@@ -168,7 +172,7 @@ static int DoListImages(int argc, const char *argv[])
     printf("Retrieving images from device %s type %d (%s)...\n",
         dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
 
-    std::vector<ToolboxFileEntry> images;
+    WCValOrderedVector<ToolboxFileEntry> images;
     
     if (ToolboxGetImageList(*dev, images)) {
         PrintFileList(images);
@@ -225,7 +229,7 @@ static int DoListSharedDir(int argc, const char *argv[])
     printf("Retrieving file list from device %s type %d (%s)...\n",
         dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
 
-    std::vector<ToolboxFileEntry> files;
+    WCValOrderedVector<ToolboxFileEntry> files;
     
     if (ToolboxGetSharedDirList(*dev, files)) {
         PrintFileList(files);
@@ -310,13 +314,13 @@ static int DoGetSharedDirFile(int argc, const char *argv[])
     printf("Retrieving file list from device %s type %d (%s)...\n",
         dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
 
-    std::vector<ToolboxFileEntry> files;
+    WCValOrderedVector<ToolboxFileEntry> files;
     if (!ToolboxGetSharedDirList(*dev, files)) {
         return 1;
     }
 
     const ToolboxFileEntry *tfe = NULL;
-    for (int i = 0; i < files.size(); i++) {
+    for (int i = 0; i < files.entries(); i++) {
         if (files[i].index == fileindex) {
             tfe = &files[i];
             break;

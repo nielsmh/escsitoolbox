@@ -27,7 +27,7 @@
 #include "../include/estb.h"
 
 
-bool ToolboxGetImageList(const Device &dev, std::vector<ToolboxFileEntry> &images)
+bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry> &images)
 {
     ScsiCommand *cmd = dev.PrepareCommand(10, 4, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return false;
@@ -51,7 +51,7 @@ bool ToolboxGetImageList(const Device &dev, std::vector<ToolboxFileEntry> &image
     size_t count = cmd->data_buf[0];
     images.clear();
     if (count < 1) return false;
-    images.reserve(count);
+    //images.reserve(count);
 
     delete cmd;
 
@@ -81,7 +81,7 @@ bool ToolboxGetImageList(const Device &dev, std::vector<ToolboxFileEntry> &image
         memcpy(&tfe, buf, sizeof(tfe));
         buf += sizeof(tfe);
         if (tfe.name[0] == '\0') break;
-        images.push_back(tfe);
+        images.append(tfe);
     }
 
     delete cmd;
@@ -116,7 +116,7 @@ bool ToolboxSetImage(const Device &dev, int newimage)
 }
 
 
-bool ToolboxGetSharedDirList(const Device &dev, std::vector<ToolboxFileEntry> &images)
+bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEntry> &images)
 {
     ScsiCommand *cmd = dev.PrepareCommand(10, 4, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return false;
@@ -140,7 +140,7 @@ bool ToolboxGetSharedDirList(const Device &dev, std::vector<ToolboxFileEntry> &i
     size_t count = cmd->data_buf[0];
     images.clear();
     if (count < 1) return false;
-    images.reserve(count);
+    //images.reserve(count);
 
     delete cmd;
 
@@ -170,7 +170,7 @@ bool ToolboxGetSharedDirList(const Device &dev, std::vector<ToolboxFileEntry> &i
         memcpy(&tfe, buf, sizeof(tfe));
         buf += sizeof(tfe);
         if (tfe.name[0] == '\0') break;
-        images.push_back(tfe);
+        images.append(tfe);
     }
 
     delete cmd;

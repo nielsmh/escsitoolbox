@@ -21,7 +21,7 @@
 #ifndef TOOLBOX_H
 #define TOOLBOX_H
 
-typedef struct {
+struct ToolboxFileEntry {
     unsigned char index;   /* byte 00: file index in directory */
     unsigned char type;    /* byte 01: type 0 = file, 1 = directory */
     char name[33];         /* byte 02-34: filename (32 byte max) + space for NUL terminator */
@@ -35,7 +35,11 @@ typedef struct {
             (unsigned long)size[3] <<  8 |
             (unsigned long)size[4];
     }
-} ToolboxFileEntry;
+
+    bool operator== (const ToolboxFileEntry &other) const {
+        return index == other.index;
+    }
+};
 
 typedef struct {
     char device_type[8];

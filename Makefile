@@ -1,4 +1,4 @@
-CXXFLAGS=-w4 -e25 -zq -od -of -d0 -bt=dos -fo=.obj -ml -xs -xr
+CXXFLAGS=-w4 -e25 -zq -oabehikls -d0 -bt=dos -fo=.obj -mc
 
 dos_objects = tbdos.obj aspiintf.obj scsiintf.obj toolbox.obj scsishrd.obj
 win_objects = tbwin.obj
