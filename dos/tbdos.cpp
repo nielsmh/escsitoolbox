@@ -462,7 +462,7 @@ static int DoPutSharedDirFile(int argc, const char *argv[])
             error_status = 3;
             break;
         }
-        printf("  Block %6lu / %lu\r", block_index, num_blocks);
+        printf("  Block %lu / %lu (%d%%)...\r", block_index+1, num_blocks, (block_index + 1) * 100 / num_blocks);
         block_index++;
         if (data_size < BUFSIZE) break;
     }
