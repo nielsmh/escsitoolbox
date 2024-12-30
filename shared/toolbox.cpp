@@ -227,7 +227,9 @@ bool ToolboxSendFileBegin(const Device &dev, const char far *filename)
 
     cmd->cdb[0] = TOOLBOX_SEND_FILE_PREP;
 
-    _fstrncpy((char far *)cmd->data_buf, filename, BUFSIZE);
+    size_t fnlen = strlen(filename);
+    if (fnlen >= BUFSIZE) fnlen = BUFSIZE - 1;
+    _fmemcpy(cmd->data_buf, filename, fnlen);
 
     switch (cmd->Execute()) {
         case SS_COMP:
@@ -257,11 +259,11 @@ bool ToolboxSendFileBlock(const Device &dev, unsigned short data_size, unsigned 
     if (cmd == NULL) return -1;
 
     cmd->cdb[0] = TOOLBOX_SEND_FILE_10;
-    cmd->cdb[1] = (unsigned char)(data_size   >>  8) & 0xFF;
-    cmd->cdb[2] = (unsigned char)(data_size        ) & 0xFF;
-    cmd->cdb[3] = (unsigned char)(block_index >> 16) & 0xFF;
-    cmd->cdb[4] = (unsigned char)(block_index >>  8) & 0xFF;
-    cmd->cdb[5] = (unsigned char)(block_index      ) & 0xFF;
+    cmd->cdb[1] = (unsigned char)((0xFF00 & data_size) >>  8);
+    cmd->cdb[2] = (unsigned char)((0x00FF & data_size)      );
+    cmd->cdb[3] = (unsigned char)((0xFF0000 & block_index) >> 16);
+    cmd->cdb[4] = (unsigned char)((0x00FF00 & block_index) >>  8);
+    cmd->cdb[5] = (unsigned char)((0x0000FF & block_index)      );
     _fmemcpy(cmd->data_buf, data, data_size);
 
     switch (cmd->Execute()) {

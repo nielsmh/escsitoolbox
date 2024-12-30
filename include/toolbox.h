@@ -94,11 +94,12 @@ enum ToolboxDeviceType {
 /** TOOLBOX_SEND_FILE_PREP (write, length 10)
  * Input:
  *  CDB 00 = command byte
- *  Data 00 = 32 byte filename to create
- *        . |
+ *  Data 00 = 32 byte filename to create,
+ *        . | must be NUL terminated
  *        . |
  *        . |
  *       31 |
+ *       32 = additional NUL terminator required
  * Output:
  *  None.
  * Notes:
