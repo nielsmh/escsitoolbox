@@ -17,8 +17,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **/
 
-#include <stdio.h>
+#include <sys/types.h> 
+#include <sys/stat.h> 
 #include <io.h>
+#include <fcntl.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <libgen.h> 
@@ -406,63 +409,64 @@ static int DoPutSharedDirFile(int argc, const char *argv[])
         return 16;
     }
 
-    const char *inpfn = argv[1];
-    const char *outfn = basename(strdup(inpfn)); // assume DOS will clean up the memory on exit
-
-    FILE *infile = fopen(inpfn, "rb");
-    if (infile == NULL) {
-        fprintf(stderr, "The source file could not be opened for reading.\n");
-        return 1;
-    }
-
     printf("Verifying destination device %s type %d (%s)...\n",
         dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
 
     WCValOrderedVector<ToolboxFileEntry> files;
     if (!ToolboxGetSharedDirList(*dev, files)) {
-        fclose(infile);
-        return 16;
+        return 17;
     }
+
+    const char *inpfn = argv[1];
+    const char *outfn = basename(strdup(inpfn)); // assume DOS will clean up the memory on exit
+
+    int infile = _open(inpfn, O_RDONLY | O_BINARY);
+    if (infile == -1) {
+        fprintf(stderr, "The source file could not be opened for reading.\n");
+        return 1;
+    }
+    long filesize = _filelength(infile);
 
     for (int i = 0; i < files.entries(); i++)  {
         if (stricmp(outfn, files[i].name) == 0) {
             fprintf(stderr, "Destination filename: %s\n", outfn);
             if (!AskForConfirmation("The destination already contains a file with this name. Overwrite?")) {
-                fclose(infile);
+                _close(infile);
                 return 2;
             }
         }
     }
 
     if (!ToolboxSendFileBegin(*dev, outfn)) {
-        fclose(infile);
-        return 17;
+        _close(infile);
+        return 18;
     }
 
     const unsigned short BUFSIZE = 512;
     char *buf = new char[BUFSIZE];
     unsigned long block_index = 0;
-    unsigned long num_blocks = filelength(infile->_handle) / BUFSIZE;
+    unsigned long num_blocks = ((unsigned long)filesize + (BUFSIZE - 1)) / BUFSIZE;
     int error_status = 0;
 
-    printf("Begin sending: %s => %s\n", inpfn, outfn);
+    printf("Sending: %s => %s\n", inpfn, outfn);
 
-    while (!feof(infile)) {
-        if (ferror(infile)) {
-            fprintf(stderr, "Error reading file, aborting transfer.\n");
-            error_status = 3;
-            break;
-        }
-        unsigned short data_size = fread(buf, BUFSIZE, 1, infile);
+    while (block_index < num_blocks) {
+        short data_size = _read(infile, buf, BUFSIZE);
         if (data_size > 0) {
             if (!ToolboxSendFileBlock(*dev, data_size, block_index, buf)) {
                 error_status = 18;
                 break;
             }
+        } else if (data_size < 0) {
+            fprintf(stderr, "Error reading file, aborting transfer.\n");
+            error_status = 3;
+            break;
         }
-        printf("  Sent blocks: %6lu / %lu\r", block_index, num_blocks);
+        printf("  Block %6lu / %lu\r", block_index, num_blocks);
+        block_index++;
+        if (data_size < BUFSIZE) break;
     }
-    printf("  Finished sending %lu blocks            \n");
+    printf("  Finished sending %lu blocks            \n", num_blocks);
     delete[] buf;
 
     if (!error_status && !ToolboxSendFileEnd(*dev)) {
@@ -473,7 +477,7 @@ static int DoPutSharedDirFile(int argc, const char *argv[])
         fprintf(stderr, "An error occurred during the transfer, the destination file may have errors.\n");
     }
 
-    fclose(infile);
+    _close(infile);
 
     return error_status;
 }
