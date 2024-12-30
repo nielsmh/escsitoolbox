@@ -23,13 +23,13 @@ Working:
 - Changing mounted CD image
 - List files on shared directory on SD card
 - Download files from shared directory
+- Upload files to shared directory
 
 Not working:
 - See the "beware" notes in the Usage section below for places where
   the device firmware might not behave as expected.
 
 Not started:
-- Upload files to shared directory
 - Windows versions of the software
   (lower priority, since the DOS version works under both Windows 3.x and 9x)
 
@@ -203,7 +203,7 @@ file you download._
 C:\> scsitb get 0 1 scsitb2.zip
 Retrieving file list from device 0:0:0 type 0 (Disk)...
 Output filename: scsitb2.zip
-  Block 5/14 (35%)...
+  Block 5 / 14 (35%)...
 ```
 
 _**BEWARE:** If a transfer is aborted before it completes, the hardware device
@@ -211,6 +211,34 @@ firmware might not close the source file on the SD card correctly.
 If this happens, it is currently unknown whether it's safe to continue using
 the hardware device. Consider switching the computer off and back on to ensure
 the device is properly reset and does not have unexpected open files._
+
+### Upload file to shared directory
+
+```
+scsitb put <device> <filename>
+```
+
+Copies a file from the computer to the shared directory on the SD card.
+
+The destination filename will be the same as the original filename.
+
+_**Note:** Current release versions (as of 2024-12-30) of BlueSCSI and ZuluSCSI
+firmware have an issue with at least some SCSI adapters, causing the transfer
+to fail._
+
+```
+C:\> scsitb put 0 D:\dev\output.log
+Verifying destination device 0:0:0 type 0 (Disk)...
+Sending: D:\dev\output.log => output.log
+  Finished sending 118 blocks
+
+C:\> scsitb put 0 D:\dev\output.log
+Verifying destination device 0:0:0 type 0 (Disk)...
+Destination filename: output.log
+The destination already contains a file with this name. Overwrite? (Y/N) y
+Sending: D:\dev\output.log => output.log
+  Block 45 / 120 (37%)...
+```
 
 ## Development environment
 
