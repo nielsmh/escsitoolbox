@@ -178,5 +178,6 @@ enum ToolboxDeviceType {
 #define TOOLBOX_COUNT_CDS      0xDA
 
 #define OPEN_RETRO_SCSI_TOO_MANY_FILES  0x0001
+#define MAX_FILE_LISTING_FILES 100
 
 #endif /* TOOLBOX_H */

@@ -29,7 +29,7 @@
 
 bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry> &images)
 {
-    ScsiCommand *cmd = dev.PrepareCommand(10, 4, SRB_DIR_IN | SRB_DIR_SCSI);
+    ScsiCommand *cmd = dev.PrepareCommand(10, 1, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return false;
 
     // Send TOOLBOX_COUNT_CDS command
@@ -56,7 +56,8 @@ bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry>
     delete cmd;
 
     // Send TOOLBOX_LIST_CDS command
-    cmd = dev.PrepareCommand(10, 4096, SRB_DIR_IN | SRB_DIR_SCSI);
+    const int BUFSIZE = MAX_FILE_LISTING_FILES * sizeof(ToolboxFileEntry);
+    cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return false;
 
     cmd->cdb[0] = TOOLBOX_LIST_CDS;
@@ -91,7 +92,7 @@ bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry>
 
 bool ToolboxSetImage(const Device &dev, int newimage)
 {
-    ScsiCommand *cmd = dev.PrepareCommand(10, 4, SRB_DIR_IN | SRB_DIR_SCSI);
+    ScsiCommand *cmd = dev.PrepareCommand(10, 0, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return 0;
     
     cmd->cdb[0] = TOOLBOX_SET_NEXT_CD;
@@ -118,7 +119,7 @@ bool ToolboxSetImage(const Device &dev, int newimage)
 
 bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEntry> &images)
 {
-    ScsiCommand *cmd = dev.PrepareCommand(10, 4, SRB_DIR_IN | SRB_DIR_SCSI);
+    ScsiCommand *cmd = dev.PrepareCommand(10, 1, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return false;
 
     // Send TOOLBOX_COUNT_FILES command
@@ -145,7 +146,8 @@ bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEn
     delete cmd;
 
     // Send TOOLBOX_LIST_FILES command
-    cmd = dev.PrepareCommand(10, 4096, SRB_DIR_IN | SRB_DIR_SCSI);
+    const int BUFSIZE = MAX_FILE_LISTING_FILES * sizeof(ToolboxFileEntry);
+    cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return false;
 
     cmd->cdb[0] = TOOLBOX_LIST_FILES;
