@@ -94,11 +94,12 @@ enum ToolboxDeviceType {
 /** TOOLBOX_SEND_FILE_PREP (write, length 10)
  * Input:
  *  CDB 00 = command byte
- *  Data 00 = 32 byte filename to create
- *        . |
+ *  Data 00 = 32 byte filename to create,
+ *        . | must be NUL terminated
  *        . |
  *        . |
  *       31 |
+ *       32 = additional NUL terminator required
  * Output:
  *  None.
  * Notes:
@@ -177,5 +178,6 @@ enum ToolboxDeviceType {
 #define TOOLBOX_COUNT_CDS      0xDA
 
 #define OPEN_RETRO_SCSI_TOO_MANY_FILES  0x0001
+#define MAX_FILE_LISTING_FILES 100
 
 #endif /* TOOLBOX_H */

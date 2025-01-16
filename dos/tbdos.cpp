@@ -17,9 +17,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **/
 
+#include <sys/types.h> 
+#include <sys/stat.h> 
+#include <io.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h> 
 #include <wcvector.h>
 
 #include "../include/aspi.h"
@@ -390,6 +395,93 @@ static int DoGetSharedDirFile(int argc, const char *argv[])
     return 0;
 }
 
+static int DoPutSharedDirFile(int argc, const char *argv[])
+{
+    int r = InitSCSI();
+
+    (void)argc; // unused parameter
+
+    if (r) return r;
+
+    const Device *dev = GetDeviceByName(argv[0]);
+    if (!dev) {
+        fprintf(stderr, "Device ID not found: %s\n", argv[0]);
+        return 16;
+    }
+
+    printf("Verifying destination device %s type %d (%s)...\n",
+        dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
+
+    WCValOrderedVector<ToolboxFileEntry> files;
+    if (!ToolboxGetSharedDirList(*dev, files)) {
+        return 17;
+    }
+
+    const char *inpfn = argv[1];
+    const char *outfn = basename(strdup(inpfn)); // assume DOS will clean up the memory on exit
+
+    int infile = _open(inpfn, O_RDONLY | O_BINARY);
+    if (infile == -1) {
+        fprintf(stderr, "The source file could not be opened for reading.\n");
+        return 1;
+    }
+    long filesize = _filelength(infile);
+
+    for (int i = 0; i < files.entries(); i++)  {
+        if (stricmp(outfn, files[i].name) == 0) {
+            fprintf(stderr, "Destination filename: %s\n", outfn);
+            if (!AskForConfirmation("The destination already contains a file with this name. Overwrite?")) {
+                _close(infile);
+                return 2;
+            }
+        }
+    }
+
+    if (!ToolboxSendFileBegin(*dev, outfn)) {
+        _close(infile);
+        return 18;
+    }
+
+    const unsigned short BUFSIZE = 512;
+    char *buf = new char[BUFSIZE];
+    unsigned long block_index = 0;
+    unsigned long num_blocks = ((unsigned long)filesize + (BUFSIZE - 1)) / BUFSIZE;
+    int error_status = 0;
+
+    printf("Sending: %s => %s\n", inpfn, outfn);
+
+    while (block_index < num_blocks) {
+        short data_size = _read(infile, buf, BUFSIZE);
+        if (data_size > 0) {
+            if (!ToolboxSendFileBlock(*dev, data_size, block_index, buf)) {
+                error_status = 18;
+                break;
+            }
+        } else if (data_size < 0) {
+            fprintf(stderr, "Error reading file, aborting transfer.\n");
+            error_status = 3;
+            break;
+        }
+        printf("  Block %lu / %lu (%d%%)...\r", block_index+1, num_blocks, (block_index + 1) * 100 / num_blocks);
+        block_index++;
+        if (data_size < BUFSIZE) break;
+    }
+    printf("  Finished sending %lu blocks            \n", num_blocks);
+    delete[] buf;
+
+    if (!error_status && !ToolboxSendFileEnd(*dev)) {
+        error_status = 19;
+    }
+
+    if (error_status) {
+        fprintf(stderr, "An error occurred during the transfer, the destination file may have errors.\n");
+    }
+
+    _close(infile);
+
+    return error_status;
+}
+
 
 static void PrintBanner(void)
 {
@@ -417,14 +509,13 @@ static void PrintHelp(void)
         "Usage:  SCSITB <command> [parameters]\n"
         "\n"
         "Commands:\n"
-        "  info              List all available SCSI adapters and devices.\n"
-        "  lsimg <device>    List available images for the given device.\n"
-        "  setimg <device> <index>\n"
-        "                    Change the mounted image in the given device to the\n"
-        "                    image with the given index in the image list.\n"
-        "  lsdir <device>    List shared directory for the given decice.\n"
-        "  get <device> <index> [filename]\n"
-        "                    Download a file from the shared directory.\n"
+        "  info                    List all available SCSI adapters and devices.\n"
+        "  lsimg <dev>             List available images for the given device.\n"
+        "  setimg <dev> <idx>      Change the mounted image in the given device, to\n"
+        "                          the image with the given index in the image list.\n"
+        "  lsdir <dev>             List shared directory for the given decice.\n"
+        "  get <dev> <idx> [name]  Download a file from the shared directory.\n"
+        "  put <dev> <filename>    Upload a file to the shared directory.\n"
         "\n"
         "Please see the documentation for more information about supported\n"
         "devices, how to configure your device for compatibility, etc.\n"
@@ -485,6 +576,14 @@ int main(int argc, const char *argv[])
     if (strcmpi(argv[1], "get") == 0) {
         if (argc >= 4) {
             return DoGetSharedDirFile(argc - 2, argv + 2);
+        } else {
+            missingargs = 2;
+        }
+    }
+
+    if (strcmpi(argv[1], "put") == 0) {
+        if (argc >= 4) {
+            return DoPutSharedDirFile(argc - 2, argv + 2);
         } else {
             missingargs = 2;
         }

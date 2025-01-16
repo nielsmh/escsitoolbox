@@ -29,7 +29,7 @@
 
 bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry> &images)
 {
-    ScsiCommand *cmd = dev.PrepareCommand(10, 4, SRB_DIR_IN | SRB_DIR_SCSI);
+    ScsiCommand *cmd = dev.PrepareCommand(10, 1, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return false;
 
     // Send TOOLBOX_COUNT_CDS command
@@ -56,11 +56,11 @@ bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry>
     delete cmd;
 
     // Send TOOLBOX_LIST_CDS command
-    cmd = dev.PrepareCommand(10, 4096, SRB_DIR_IN | SRB_DIR_SCSI);
+    const int BUFSIZE = MAX_FILE_LISTING_FILES * sizeof(ToolboxFileEntry);
+    cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return false;
 
     cmd->cdb[0] = TOOLBOX_LIST_CDS;
-    memset(cmd->data_buf, 0, 4096);
 
     switch (cmd->Execute()) {
         case SS_COMP:
@@ -75,13 +75,14 @@ bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry>
             return false;
     }
 
-    BYTE *buf = cmd->data_buf;
+    BYTE far *buf = cmd->data_buf;
     while (count > 0) {
         ToolboxFileEntry tfe;
-        memcpy(&tfe, buf, sizeof(tfe));
+        _fmemcpy(&tfe, buf, sizeof(tfe));
         buf += sizeof(tfe);
         if (tfe.name[0] == '\0') break;
         images.append(tfe);
+        count--;
     }
 
     delete cmd;
@@ -91,7 +92,7 @@ bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry>
 
 bool ToolboxSetImage(const Device &dev, int newimage)
 {
-    ScsiCommand *cmd = dev.PrepareCommand(10, 4, SRB_DIR_IN | SRB_DIR_SCSI);
+    ScsiCommand *cmd = dev.PrepareCommand(10, 0, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return 0;
     
     cmd->cdb[0] = TOOLBOX_SET_NEXT_CD;
@@ -118,7 +119,7 @@ bool ToolboxSetImage(const Device &dev, int newimage)
 
 bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEntry> &images)
 {
-    ScsiCommand *cmd = dev.PrepareCommand(10, 4, SRB_DIR_IN | SRB_DIR_SCSI);
+    ScsiCommand *cmd = dev.PrepareCommand(10, 1, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return false;
 
     // Send TOOLBOX_COUNT_FILES command
@@ -145,11 +146,11 @@ bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEn
     delete cmd;
 
     // Send TOOLBOX_LIST_FILES command
-    cmd = dev.PrepareCommand(10, 4096, SRB_DIR_IN | SRB_DIR_SCSI);
+    const int BUFSIZE = MAX_FILE_LISTING_FILES * sizeof(ToolboxFileEntry);
+    cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return false;
 
     cmd->cdb[0] = TOOLBOX_LIST_FILES;
-    memset(cmd->data_buf, 0, 4096);
 
     switch (cmd->Execute()) {
         case SS_COMP:
@@ -164,13 +165,14 @@ bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEn
             return false;
     }
 
-    BYTE *buf = cmd->data_buf;
+    BYTE far *buf = cmd->data_buf;
     while (count > 0) {
         ToolboxFileEntry tfe;
-        memcpy(&tfe, buf, sizeof(tfe));
+        _fmemcpy(&tfe, buf, sizeof(tfe));
         buf += sizeof(tfe);
         if (tfe.name[0] == '\0') break;
         images.append(tfe);
+        count--;
     }
 
     delete cmd;
@@ -211,11 +213,102 @@ int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockind
         return -1;
     }
     if (transferred > 0) {
-        memcpy(databuf, cmd->data_buf, transferred);
+        _fmemcpy(databuf, cmd->data_buf, transferred);
     }
 
     delete cmd;
     return transferred;
+}
+
+bool ToolboxSendFileBegin(const Device &dev, const char far *filename)
+{
+    const int BUFSIZE = 33;
+    
+    ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_OUT | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);
+    if (cmd == NULL) return -1;
+
+    cmd->cdb[0] = TOOLBOX_SEND_FILE_PREP;
+
+    size_t fnlen = strlen(filename);
+    if (fnlen >= BUFSIZE) fnlen = BUFSIZE - 1;
+    _fmemcpy(cmd->data_buf, filename, fnlen);
+
+    switch (cmd->Execute()) {
+        case SS_COMP:
+            break;
+        case SS_PENDING:
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_SEND_FILE_PREP", dev.name);
+            return false;
+        default:
+            fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_SEND_FILE_PREP was %#x, %#x, %#x\n",
+                dev.name, cmd->GetStatus(), cmd->GetHAStatus(), cmd->GetTargetStatus());
+            PrintSense(cmd->GetSenseData());
+            return false;
+    }
+
+    delete cmd;
+    return true;
+}
+
+bool ToolboxSendFileBlock(const Device &dev, unsigned short data_size, unsigned long block_index, const char far *data)
+{
+    const int BUFSIZE = 512;
+
+    if (data_size > BUFSIZE) fprintf(stderr, "Illegal data_size\n"), abort();
+    if (block_index >> 24 > 0) fprintf(stderr, "Illegal block_index\n"), abort();
+
+    ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_OUT | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);
+    if (cmd == NULL) return -1;
+
+    cmd->cdb[0] = TOOLBOX_SEND_FILE_10;
+    cmd->cdb[1] = (unsigned char)((0xFF00 & data_size) >>  8);
+    cmd->cdb[2] = (unsigned char)((0x00FF & data_size)      );
+    cmd->cdb[3] = (unsigned char)((0xFF0000 & block_index) >> 16);
+    cmd->cdb[4] = (unsigned char)((0x00FF00 & block_index) >>  8);
+    cmd->cdb[5] = (unsigned char)((0x0000FF & block_index)      );
+    _fmemcpy(cmd->data_buf, data, data_size);
+
+    switch (cmd->Execute()) {
+        case SS_COMP:
+            break;
+        case SS_PENDING:
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_SEND_FILE_10", dev.name);
+            return false;
+        default:
+            fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_SEND_FILE_10 was %#x, %#x, %#x\n",
+                dev.name, cmd->GetStatus(), cmd->GetHAStatus(), cmd->GetTargetStatus());
+            PrintSense(cmd->GetSenseData());
+            return false;
+    }
+
+    delete cmd;
+    return true;
+}
+
+bool ToolboxSendFileEnd(const Device &dev)
+{
+    const int BUFSIZE = 4;
+    
+    ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_OUT | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);
+    if (cmd == NULL) return -1;
+
+    cmd->cdb[0] = TOOLBOX_SEND_FILE_END;
+
+    switch (cmd->Execute()) {
+        case SS_COMP:
+            break;
+        case SS_PENDING:
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_SEND_FILE_END", dev.name);
+            return false;
+        default:
+            fprintf(stderr, "[%s] Return from SCSI command TOOLBOX_SEND_FILE_END was %#x, %#x, %#x\n",
+                dev.name, cmd->GetStatus(), cmd->GetHAStatus(), cmd->GetTargetStatus());
+            PrintSense(cmd->GetSenseData());
+            return false;
+    }
+
+    delete cmd;
+    return true;
 }
 
 bool ToolboxListDevices(const Device &dev, ToolboxDeviceList &devlist)
@@ -235,7 +328,7 @@ bool ToolboxListDevices(const Device &dev, ToolboxDeviceList &devlist)
             return false;
     }
 
-    memcpy(&devlist, cmd->data_buf, sizeof(devlist));
+    _fmemcpy(&devlist, cmd->data_buf, sizeof(devlist));
     
     delete cmd;
     return true;

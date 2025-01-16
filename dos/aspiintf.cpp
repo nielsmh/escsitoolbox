@@ -144,7 +144,7 @@ struct DosScsiCommand : public ScsiCommand {
         if (bufsize < 0) abort();
         
         data_buf = new unsigned char[bufsize];
-        memset(data_buf, 0, bufsize);
+        _fmemset(data_buf, 0, bufsize);
         device = dev;
         
         srb6.SRB_Cmd = SC_EXEC_SCSI_CMD;
