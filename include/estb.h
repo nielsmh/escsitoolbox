@@ -112,6 +112,8 @@ bool ToolboxListDevices(const Device &dev, ToolboxDeviceList &devlist);
 bool ToolboxSendFileBegin(const Device &dev, const char *filename);
 bool ToolboxSendFileBlock(const Device &dev, unsigned short data_size, unsigned long block_index, const char *data);
 bool ToolboxSendFileEnd(const Device &dev);
+int ToolboxGetDebugFlag(const Device &dev);
+bool ToolboxSetDebugFlag(const Device &dev, bool debug_enabled);
 
 
 #endif /* ESTB_H */
