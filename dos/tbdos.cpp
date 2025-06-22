@@ -361,12 +361,15 @@ static int DoGetSharedDirFile(int argc, const char *argv[])
 
     // TODO: check if destination volume has enough space for transfer first?
 
-    unsigned long totalblocks = (tfe->GetSize() + 4095) / 4096;
-    unsigned char *databuf = new unsigned char[4096];
+    const int BLOCKSIZE = 4096;
+    unsigned long totalblocks = (tfe->GetSize() + (BLOCKSIZE - 1)) / BLOCKSIZE;
+    unsigned char *databuf = new unsigned char[BLOCKSIZE];
+    int lastblocksize = (int)(tfe->GetSize() % BLOCKSIZE);
     unsigned long totaltransferred = 0;
     for (unsigned long block = 0; block < totalblocks; block++) {
         printf("  Block %ld / %ld (%d%%)...\r", block+1, totalblocks, (block + 1) * 100 / totalblocks);
-        int r = ToolboxGetFileBlock(*dev, fileindex, block, databuf);
+        int bufsize = block == (totalblocks - 1) ? lastblocksize : BLOCKSIZE;
+        int r = ToolboxGetFileBlock(*dev, fileindex, block, databuf, bufsize);
         bool error = r < 0;
         if (r == 0) {
             fprintf(stderr,
@@ -384,7 +387,7 @@ static int DoGetSharedDirFile(int argc, const char *argv[])
         }
         if (error) {
             fprintf(stderr, "Aborting transfer...                   \n");
-            ToolboxGetFileBlock(*dev, fileindex, totalblocks-1, databuf);
+            ToolboxGetFileBlock(*dev, fileindex, totalblocks-1, databuf, lastblocksize);
             delete[] databuf;
             return 3;
         }
