@@ -6,7 +6,7 @@ win_resources = tbwin.res
 dos_exe = scsitb.exe
 win_exe = scsitbw.exe
 
-.cpp: dos\;win\;shared\
+.cpp: dos/;win/;shared/
 
 .cpp.obj: .AUTODEPEND
 	wcl -c -cc++ -q $(CXXFLAGS) $[*
@@ -19,10 +19,10 @@ $(win_exe) $(win_resources): $(win_objects) win\tbwin.rc $(dos_exe)
 	wrc -q -bt=windows win\tbwin.rc $^.
 
 clean: .SYMBOLIC
-	del *.err
-	del $(dos_exe)
-	del $(dos_objects)
-	del $(win_exe)
-	del $(win_objects) $(win_resources)
+	rm -f *.err
+	rm -f $(dos_exe)
+	rm -f $(dos_objects)
+	rm -f $(win_exe)
+	rm -f $(win_objects) $(win_resources)
 
 all: $(dos_exe)
