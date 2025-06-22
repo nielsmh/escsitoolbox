@@ -240,6 +240,17 @@ Sending: D:\dev\output.log => output.log
   Block 45 / 120 (37%)...
 ```
 
+### Toggle debug logging on device firmware
+
+```
+scsitb debug <device> [flag]
+```
+
+Displays, and optionally changes, the device firmware's internal debug logging flag.
+
+The _flag_ parameter can be 0 or 1, to disable or enable debug logging. If the parameter
+is omitted, the current flag is displayed without changing it.
+
 ## Development environment
 
 Currently this project is developed with Open Watcom C 1.9,
