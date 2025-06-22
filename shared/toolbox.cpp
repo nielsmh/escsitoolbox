@@ -112,7 +112,6 @@ bool ToolboxSetImage(const Device &dev, int newimage)
     }
 
     delete cmd;
-
     return true;
 }
 
@@ -182,7 +181,7 @@ bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEn
 
 int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockindex, unsigned char databuf[], int bufsize)
 {
-    ScsiCommand *cmd = dev.PrepareCommand(10, bufsize, SRB_DIR_IN | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);
+    ScsiCommand *cmd = dev.PrepareCommand(10, bufsize, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return -1;
 
     cmd->cdb[0] = TOOLBOX_GET_FILE;
@@ -205,24 +204,17 @@ int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockind
             return -1;
     }
 
-    int transferred = bufsize - cmd->GetBufSize();
-    if (transferred > bufsize) {
-        fprintf(stderr, "Unexpected large transfer received?! %ld bytes\n", transferred);
-        return -1;
-    }
-    if (transferred > 0) {
-        _fmemcpy(databuf, cmd->data_buf, transferred);
-    }
+    _fmemcpy(databuf, cmd->data_buf, bufsize);
 
     delete cmd;
-    return transferred;
+    return bufsize;
 }
 
 bool ToolboxSendFileBegin(const Device &dev, const char far *filename)
 {
     const int BUFSIZE = 33;
     
-    ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_OUT | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);
+    ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_OUT | SRB_DIR_SCSI);
     if (cmd == NULL) return -1;
 
     cmd->cdb[0] = TOOLBOX_SEND_FILE_PREP;
@@ -255,7 +247,7 @@ bool ToolboxSendFileBlock(const Device &dev, unsigned short data_size, unsigned 
     if (data_size > BUFSIZE) fprintf(stderr, "Illegal data_size\n"), abort();
     if (block_index >> 24 > 0) fprintf(stderr, "Illegal block_index\n"), abort();
 
-    ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_OUT | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);
+    ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_OUT | SRB_DIR_SCSI);
     if (cmd == NULL) return -1;
 
     cmd->cdb[0] = TOOLBOX_SEND_FILE_10;
@@ -287,7 +279,7 @@ bool ToolboxSendFileEnd(const Device &dev)
 {
     const int BUFSIZE = 4;
     
-    ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_OUT | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);
+    ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_OUT | SRB_DIR_SCSI);
     if (cmd == NULL) return -1;
 
     cmd->cdb[0] = TOOLBOX_SEND_FILE_END;
@@ -311,7 +303,7 @@ bool ToolboxSendFileEnd(const Device &dev)
 
 bool ToolboxListDevices(const Device &dev, ToolboxDeviceList &devlist)
 {
-    ScsiCommand *cmd = dev.PrepareCommand(10, sizeof(devlist), SRB_DIR_IN | SRB_DIR_SCSI | SRB_ENABLE_RESIDUAL_COUNT);
+    ScsiCommand *cmd = dev.PrepareCommand(10, sizeof(devlist), SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return -1;
 
     cmd->cdb[0] = TOOLBOX_LIST_DEVICES;
