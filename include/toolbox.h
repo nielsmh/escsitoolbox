@@ -76,10 +76,13 @@ enum ToolboxDeviceType {
  *      04 | Big endian
  *      05 | Must be 0 on first call for a file to open it
  * Output:
- *  Up to 4096 bytes of file data
+ *  Up to 4096 bytes of file data. The transfer size must be calculated from the
+ *  actual file size retrieved with TOOLBOX_LIST_FILES, all blocks are 4096 bytes
+ *  except for the last block, which may be smaller.
  * Notes:
  *  The firmware expects the host to read files sequentially and completely.
- *  Reading a file is done when a read returns less than 4096 bytes.
+ *  Always read block 0 first, and final block last, to ensure the file is opened
+ *  and closed properly on the device firmware.
  */
 #define TOOLBOX_GET_FILE       0xD1
 
