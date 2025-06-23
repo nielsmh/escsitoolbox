@@ -8,8 +8,6 @@ Firmwares known to support this interface:
 * https://github.com/BlueSCSI/BlueSCSI-v2 (version 2024.05.21 and later)
 * https://github.com/ZuluSCSI/ZuluSCSI-firmware (version 2024.05.17 and later)
 
-The Toolbox functionality in this line of firmwares was originally designed for a
-Mac OS application and has a few design choices relating to that.
 
 ## Status
 
@@ -19,15 +17,19 @@ development and is not yet stable.
 
 Working:
 - Enumerate installed SCSI devices
-- Querying for list of available CD images
-- Changing mounted CD image
+- Querying for list of available CD/disk images
+- Changing mounted CD/disk image
 - List files on shared directory on SD card
 - Download files from shared directory
 - Upload files to shared directory
+- Toggle firmware debug logging mode
 
 Not working:
 - See the "beware" notes in the Usage section below for places where
   the device firmware might not behave as expected.
+- The program doesn't actively check for the devices being queried having the
+  toolbox feature available or enabled. If you attempt to send commands to
+  a device that doesn't have toolbox support, the device might misbehave.
 
 Not started:
 - Windows versions of the software
@@ -46,10 +48,11 @@ EnableToolbox = 1
 
 Make sure you have installed an appropriate ASPI driver for DOS in your `config.sys` file.
 The driver to use depends on your SCSI host adapter. Note that some driver versions
-are known to cause problems currently. Please report any you discover as bugs.
+are known to cause problems currently. Bug reports about specific hardware and driver
+versions are very welcome.
 
-The DOS version also appears to work in MS-DOS Prompt under Windows 9x/Me,
-where Windows will provide ASPI services instead of using a real-mode DOS driver.
+The DOS version also works in MS-DOS Prompt under Windows 9x/Me, where Windows will
+provide ASPI services, instead of using a real-mode DOS driver.
 
 Copy the `SCSITB.EXE` file to your computer with the emulated SCSI device installed.
 Ideally, place it in a directory on your PATH, for easy access.
@@ -117,6 +120,7 @@ The number before each file in the list is its index.
 
 Note that there is a limit of max 100 images. If you have more than
 100 files in your folder on the SD card, the command will fail.
+This is a restriction imposed from the protocol used.
 
 ### Change mounted disk image
 
@@ -143,9 +147,14 @@ _**BEWARE:** BlueSCSI releases before 2024.05.21, and ZuluSCSI releases before
 2024.05.17, do not report the media change correctly, and will confuse the CD-ROM
 device driver. Make sure to use an updated firmware to avoid these issues._
 
-_**Note:** As of June 4, 2024, BlueSCSCI and ZuluSCSI only support changing mounted
-image on CD-ROM drives. There are plans to support changing images for other device
-types, but not any release dates yet._
+_**Note:** On current firmware versions, as of June 23, 2025, the firmwares for
+BlueSCSI and ZuluSCSI devices only search for disk images in a folder named "CDx",
+"FDx", "ZPx", and so on, depending on the device type, and where "x" is the device
+number. Image file directory in the ini file is not used._
+
+_**Note:** Depending on the hardware and firmware version used, this may allow
+switching image only on emulated CD-ROM devices, or on several other removable
+media type devices. Please check the documentation for your specific device._
 
 ### List shared directory on SD card
 
@@ -253,14 +262,14 @@ is omitted, the current flag is displayed without changing it.
 
 ## Development environment
 
-Currently this project is developed with Open Watcom C 1.9,
-and is not tested with any other compilers/toolchains.
+Currently this project is developed with Open Watcom C++ 1.9 and 2.0 beta,
+and is not tested with any other compilers/toolchains. It is possible to build the
+software on modern Windows or Linux systems.
 
-Testing is currently primarily done with an Adaptec AIC-7870 (AHA-2940) host adapter,
-using ZuluSCSI RP2040 and BlueSCSI v2 devices, running recent firmware versions.
-
-Testing with SCSI adapters from other manufacturers has so far caused problems,
-and only ASPI managers from Adaptec and Microsoft (Windows 9x) work correctly.
+The software is tested with a variety of SCSI host adapters, both for PCI bus and for
+ISA bus, but the tests are not comprehensive. Specific host adapters, or specific ASPI
+driver versions, may cause issues. Please report these, and include as much detail about
+the hardware and software environment as possible.
 
 ## License
 
