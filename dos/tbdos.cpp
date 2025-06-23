@@ -183,7 +183,7 @@ static int DoListImages(int argc, const char *argv[])
         PrintFileList(images);
         return 0;
     } else {
-        return 1;
+        return 17;
     }
 }
 
@@ -240,7 +240,7 @@ static int DoListSharedDir(int argc, const char *argv[])
         PrintFileList(files);
         return 0;
     } else {
-        return 1;
+        return 17;
     }
 }
 
@@ -482,6 +482,61 @@ static int DoPutSharedDirFile(int argc, const char *argv[])
     return error_status;
 }
 
+static int DoDebugFlag(int argc, const char *argv[])
+{
+    bool perform_set = false;
+    bool new_flag = false;
+    if (argc >= 2) {
+        perform_set = true;
+        switch (argv[1][0]) {
+            case '1':
+            case 'y':
+            case 't':
+            case 'Y':
+            case 'T':
+                new_flag = true;
+                break;
+            case '0':
+            case 'n':
+            case 'f':
+            case 'N':
+            case 'F':
+                new_flag = false;
+                break;
+            default:
+                fprintf(stderr, "Invalid value for new debug flag, specify 0 or 1\n");
+                return 9;
+        }
+    }
+
+    int r = InitSCSI();
+
+    if (r) return r;
+
+    const Device *dev = GetDeviceByName(argv[0]);
+    if (!dev) {
+        fprintf(stderr, "Device ID not found: %s\n", argv[0]);
+        return 16;
+    }
+
+    int current_flag = ToolboxGetDebugFlag(*dev);
+    if (current_flag < 0) {
+        fprintf(stderr, "Error retrieving current debug flag from device\n");
+        return 17;
+    }
+    printf("Current debug flag for device %s: %s\n", dev->name, current_flag ? "ENABLED" : "Disabled");
+
+    if (perform_set) {
+        if (ToolboxSetDebugFlag(*dev, new_flag)) {
+            printf("Changed debug flag on device %s: %s\n", dev->name, new_flag ? "ENABLED" : "Disabled");
+        } else {
+            fprintf(stderr, "Error setting debug flag on device\n");
+            return 18;
+        }
+    }
+
+    return 0;
+}
 
 static void PrintBanner(void)
 {
@@ -510,6 +565,7 @@ static void PrintHelp(void)
         "\n"
         "Commands:\n"
         "  info                    List all available SCSI adapters and devices.\n"
+        "  debug <dev> [flag]      Show or set device firmware debug flag.\n"
         "  lsimg <dev>             List available images for the given device.\n"
         "  setimg <dev> <idx>      Change the mounted image in the given device, to\n"
         "                          the image with the given index in the image list.\n"
@@ -531,7 +587,7 @@ int main(int argc, const char *argv[])
     if (argc < 2) {
         PrintBanner();
         PrintHelp();
-        return 1;
+        return 8;
     }
 
     if (strcmpi(argv[1], "help") == 0 || strcmpi(argv[1], "h") == 0 ||
@@ -547,6 +603,14 @@ int main(int argc, const char *argv[])
 
     if (strcmpi(argv[1], "info") == 0) {
         return DoDeviceInfo(argc - 2, argv + 2);
+    }
+
+    if (strcmpi(argv[1], "debug") == 0) {
+        if (argc >= 3) {
+            return DoDebugFlag(argc - 2, argv + 2);
+        } else {
+            missingargs = 1;
+        }
     }
 
     if (strcmpi(argv[1], "lsimg") == 0) {
@@ -592,11 +656,11 @@ int main(int argc, const char *argv[])
     if (missingargs) {
         fprintf(stderr, "Missing parameters to command: %s\n\n", argv[1]);
         PrintHelp();
-        return 1;
+        return 8;
     } else {
         fprintf(stderr, "Unknown command: %s\n\n", argv[1]);
         PrintHelp();
-        return 1;
+        return 8;
     }
 }
 

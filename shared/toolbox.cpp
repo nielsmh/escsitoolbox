@@ -329,7 +329,55 @@ bool ToolboxListDevices(const Device &dev, ToolboxDeviceList &devlist)
     }
 
     _fmemcpy(&devlist, cmd->data_buf, sizeof(devlist));
-    
+
+    delete cmd;
+    return true;
+}
+
+int ToolboxGetDebugFlag(const Device &dev)
+{
+    const int BUFSIZE = 1;
+    ScsiCommand *cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_IN | SRB_DIR_SCSI);
+    if (cmd == NULL) return -1;
+
+    cmd->cdb[0] = TOOLBOX_TOGGLE_DEBUG;
+    cmd->cdb[1] = 1; // get debug state
+
+    switch (cmd->Execute()) {
+        case SS_COMP:
+            break;
+        case SS_PENDING:
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_TOGGLE_DEBUG(get)", dev.name);
+            return -1;
+        default:
+            return -2;
+    }
+
+    int debug_flag = cmd->data_buf[0];
+
+    delete cmd;
+    return debug_flag;
+}
+
+bool ToolboxSetDebugFlag(const Device &dev, bool debug_enabled)
+{
+    ScsiCommand *cmd = dev.PrepareCommand(10, 0, SRB_DIR_IN | SRB_DIR_SCSI);
+    if (cmd == NULL) return -1;
+
+    cmd->cdb[0] = TOOLBOX_TOGGLE_DEBUG;
+    cmd->cdb[1] = 0; // set debug state
+    cmd->cdb[2] = debug_enabled ? 1 : 0;
+
+    switch (cmd->Execute()) {
+        case SS_COMP:
+            break;
+        case SS_PENDING:
+            fprintf(stderr, "[%s] Timeout waiting for TOOLBOX_TOGGLE_DEBUG(set)", dev.name);
+            return false;
+        default:
+            return false;
+    }
+
     delete cmd;
     return true;
 }
