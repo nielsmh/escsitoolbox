@@ -550,7 +550,7 @@ static void PrintBanner(void)
 {
     printf(
         "Toolbox for Emulated SCSI devices\n"
-        "Copyright 2024 Niels Martin Hansen\n"
+        "Copyright 2025 Niels Martin Hansen\n"
         "\n"
     );
 }
