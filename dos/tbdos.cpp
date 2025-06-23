@@ -361,17 +361,25 @@ static int DoGetSharedDirFile(int argc, const char *argv[])
 
     // TODO: check if destination volume has enough space for transfer first?
 
-    unsigned long totalblocks = (tfe->GetSize() + 4095) / 4096;
-    unsigned char *databuf = new unsigned char[4096];
+    // Protocol specifies that the block size is 4096 bytes.
+    const int BLOCKSIZE = 4096;
+    unsigned long totalblocks = (tfe->GetSize() + (BLOCKSIZE - 1)) / BLOCKSIZE;
+    // Except the final block may be smaller according to the actual file size
+    // retrieved from the folder listing.
+    int lastblocksize = (int)(tfe->GetSize() % BLOCKSIZE);
+    if (lastblocksize == 0) lastblocksize  = BLOCKSIZE;
+    // Prepare to do actual transfer.
+    unsigned char *databuf = new unsigned char[BLOCKSIZE];
     unsigned long totaltransferred = 0;
     for (unsigned long block = 0; block < totalblocks; block++) {
         printf("  Block %ld / %ld (%d%%)...\r", block+1, totalblocks, (block + 1) * 100 / totalblocks);
-        int r = ToolboxGetFileBlock(*dev, fileindex, block, databuf);
+        int bufsize = block == (totalblocks - 1) ? lastblocksize : BLOCKSIZE;
+        int r = ToolboxGetFileBlock(*dev, fileindex, block, databuf, bufsize);
         bool error = r < 0;
         if (r == 0) {
             fprintf(stderr,
-                "Unexpected zero byte transfer. Maybe your SCSI adapter or ASPI driver does not\n"
-                "support the Residual Byte Count Reporting feature?\n"
+                "Unexpected zero byte transfer.                                       \n"
+                "If this occurs consistently, please file a bug report to the project.\n"
                 );
         }
         if (!error) {
@@ -384,7 +392,7 @@ static int DoGetSharedDirFile(int argc, const char *argv[])
         }
         if (error) {
             fprintf(stderr, "Aborting transfer...                   \n");
-            ToolboxGetFileBlock(*dev, fileindex, totalblocks-1, databuf);
+            ToolboxGetFileBlock(*dev, fileindex, totalblocks-1, databuf, lastblocksize);
             delete[] databuf;
             return 3;
         }

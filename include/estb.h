@@ -107,7 +107,7 @@ void PrintSense(const SENSE_DATA_FMT far *s);
 bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry> &images);
 bool ToolboxSetImage(const Device &dev, int newimage);
 bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEntry> &images);
-int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockindex, unsigned char databuf[]);
+int ToolboxGetFileBlock(const Device &dev, int fileindex, unsigned long blockindex, unsigned char databuf[], int bufsize);
 bool ToolboxListDevices(const Device &dev, ToolboxDeviceList &devlist);
 bool ToolboxSendFileBegin(const Device &dev, const char *filename);
 bool ToolboxSendFileBlock(const Device &dev, unsigned short data_size, unsigned long block_index, const char *data);
