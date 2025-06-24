@@ -131,9 +131,12 @@ static int GetAdapterDeviceInfo(int adapter_id)
         // Otherwise, scan all the LUNs
         for (lun = 0; lun <= MAXLUN; lun++) {
             r = QueryDevice(adapter_id, target_id, lun, &devtype);
+            // Abort if an error occurred
             if (r < 0) return 0;
-            if (r == 0) continue;
+            // Stop scanning this target id when a LUN reports no device
+            if (r == 0) break;
 
+            // Otherwise register the device
             Device d;
             sprintf(d.name, "%d:%d:%d", adapter_id, target_id, lun);
             d.devtype = devtype;
