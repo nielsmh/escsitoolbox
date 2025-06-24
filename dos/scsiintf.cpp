@@ -37,7 +37,7 @@ static int GetHostAdapterInfo(void)
     do {
         memset(&host_adapter_info, 0, sizeof(host_adapter_info));
         host_adapter_info.SRB_Cmd = SC_HA_INQUIRY;
-        host_adapter_info.SRB_HaId = 0;
+        host_adapter_info.SRB_HaId = adapter_id;
         SendASPICommand(&host_adapter_info);
         switch (host_adapter_info.SRB_Status) {
             case SS_PENDING:
@@ -59,6 +59,7 @@ static int GetHostAdapterInfo(void)
         /* fill Adapter struct */
         Adapter *ad = &_adapters[adapter_id];
         memset(ad, 0, sizeof(*ad));
+        ad->ha_id = host_adapter_info.SRB_HaId;
         ad->scsi_id = host_adapter_info.HA_SCSI_ID;
         strncpy(ad->manager_id,
             (char *)host_adapter_info.HA_ManagerId,
@@ -125,6 +126,9 @@ static int GetAdapterDeviceInfo(int adapter_id)
     int devsonadapter = 0;
 
     for (target_id = 0; target_id < _adapters[adapter_id].max_targets; target_id++) {
+        // Do not try to enumerate the host adapter itself
+        if (target_id == _adapters[adapter_id].scsi_id) continue;
+        // Otherwise, scan all the LUNs
         for (lun = 0; lun <= MAXLUN; lun++) {
             r = QueryDevice(adapter_id, target_id, lun, &devtype);
             if (r < 0) return 0;

@@ -28,6 +28,7 @@
 
 
 struct Adapter {
+    short ha_id;
     short scsi_id;
     char manager_id[18];
     char adapter_id[18];
@@ -37,7 +38,7 @@ struct Adapter {
     unsigned long max_transfer_length;
 
     bool operator== (const Adapter &other) const {
-        return scsi_id == other.scsi_id;
+        return ha_id == other.ha_id;
     }
 };
 
