@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <libgen.h> 
 #include <wcvector.h>
 
@@ -160,6 +161,18 @@ static void PrintFileList(const WCValOrderedVector<ToolboxFileEntry> &files)
 }
 
 
+static int FindFilenameInList(const WCValOrderedVector<ToolboxFileEntry> &files, const char *searchname)
+{
+    for (int i = 0; i < files.entries(); i++) {
+        if (strncasecmp(files[i].name, searchname, sizeof(files[i].name) - 1) == 0) {
+            printf("Selected file %d: %s\n", i, files[i].name);
+            return i;
+        }
+    }
+    return -1;
+}
+
+
 static int DoListImages(int argc, const char *argv[])
 {
     int r = InitSCSI();
@@ -204,8 +217,22 @@ static int DoSetImage(int argc, const char *argv[])
     }
 
     if (sscanf(argv[1], "%d", &newimage) != 1 || newimage < 0 || newimage > 100) {
-        fprintf(stderr, "Illegal image index, please use an index returned from the 'lsimg' command.\n");
-        return 17;
+        // Not a valid image index, try searching for a filename match instead
+        printf("Retrieving images from device %s type %d (%s)...\n",
+            dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
+
+        WCValOrderedVector<ToolboxFileEntry> images;
+
+        if (ToolboxGetImageList(*dev, images)) {
+            newimage = FindFilenameInList(images, argv[1]);
+        } else {
+            return 18;
+        }
+
+        if (newimage == -1) {
+            fprintf(stderr, "Illegal image index or filename, use the 'lsimg' command to see valid images.\n");
+            return 17;
+        }
     }
     
     printf("Set loaded image for device %s type %d (%s)\n", dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
@@ -575,8 +602,8 @@ static void PrintHelp(void)
         "  info                    List all available SCSI adapters and devices.\n"
         "  debug <dev> [flag]      Show or set device firmware debug flag.\n"
         "  lsimg <dev>             List available images for the given device.\n"
-        "  setimg <dev> <idx>      Change the mounted image in the given device, to\n"
-        "                          the image with the given index in the image list.\n"
+        "  setimg <dev> <img>      Change the mounted image in the given device, to\n"
+        "                          the image with the given index or filename.\n"
         "  lsdir <dev>             List shared directory for the given decice.\n"
         "  get <dev> <idx> [name]  Download a file from the shared directory.\n"
         "  put <dev> <filename>    Upload a file to the shared directory.\n"
