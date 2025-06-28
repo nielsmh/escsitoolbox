@@ -126,12 +126,20 @@ This is a restriction imposed from the protocol used.
 
 ```
 scsitb setimg <device> <imageindex>
+scsitb setimg <device> <filename>
 ```
 
 This requests that a different disk image is mounted on the emulated device.
-Use the image index given by the `lsimg` command.
+Either use the image index given by the `lsimg` command, or specify a filename
+directly.
 
 ```
+C:\> scsitb setimg 1 ezscsi4.iso
+Retrieving images from device 0:1:0 type 5 (CD-ROM)...
+Selected file 1: ezscsi4.iso
+Set loaded image for device 0:1:0 type 5 (CD-ROM)
+Set next image command sent successfully.
+
 C:\> scsitb setimg 0:1 2
 Set loaded image for device 0:1:0 type 5 (CD-ROM)
 Set next image command sent successfully.
@@ -193,10 +201,14 @@ Note that there is a limit of max 100 files. If you have more than
 ### Download file from shared directory
 
 ```
-scsitb get <device> <fileindex> [filename]
+scsitb get <device> <src-fileindex> [dst-filename]
+scsitb get <device> <src-filename> [dst-filename]
 ```
 
 Copies a file from the shared directory on the SD card onto your computer.
+
+The source file can either be specified by its index, retrieved via the `lsdir`
+command, or via its filename.
 
 You can specify the destination filename, but if you leave it out, the original
 filename will be used.
@@ -211,8 +223,13 @@ file you download._
 ```
 C:\> scsitb get 0 1 scsitb2.zip
 Retrieving file list from device 0:0:0 type 0 (Disk)...
-Output filename: scsitb2.zip
-  Block 5 / 14 (35%)...
+Output file: scsitb2.zip
+  Block 14 / 14 (100%)...
+C:\> scsitb get 0 "jazz jackrabbit.zip"
+Retrieving file list from device 0:0:0 type 0 (Disk)...
+Selected file 5: Jazz Jackrabbit.zip
+Output file: jazzjack.zip
+  Block 325 / 1397 (23%)...
 ```
 
 _**BEWARE:** If a transfer is aborted before it completes, the hardware device

@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <libgen.h> 
 #include <wcvector.h>
 
@@ -160,6 +161,19 @@ static void PrintFileList(const WCValOrderedVector<ToolboxFileEntry> &files)
 }
 
 
+static int FindFilenameInList(const WCValOrderedVector<ToolboxFileEntry> &files, const char *searchname)
+{
+    for (int i = 0; i < files.entries(); i++) {
+        const ToolboxFileEntry &tfe = files[i];
+        if (strncasecmp(tfe.name, searchname, sizeof(tfe.name) - 1) == 0) {
+            printf("Selected file %d: %s\n", tfe.index, tfe.name);
+            return tfe.index;
+        }
+    }
+    return -1;
+}
+
+
 static int DoListImages(int argc, const char *argv[])
 {
     int r = InitSCSI();
@@ -204,8 +218,22 @@ static int DoSetImage(int argc, const char *argv[])
     }
 
     if (sscanf(argv[1], "%d", &newimage) != 1 || newimage < 0 || newimage > 100) {
-        fprintf(stderr, "Illegal image index, please use an index returned from the 'lsimg' command.\n");
-        return 17;
+        // Not a valid image index, try searching for a filename match instead
+        printf("Retrieving images from device %s type %d (%s)...\n",
+            dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
+
+        WCValOrderedVector<ToolboxFileEntry> images;
+
+        if (ToolboxGetImageList(*dev, images)) {
+            newimage = FindFilenameInList(images, argv[1]);
+        } else {
+            return 18;
+        }
+
+        if (newimage == -1) {
+            fprintf(stderr, "Illegal image index or filename, use the 'lsimg' command to see valid images.\n");
+            return 17;
+        }
     }
     
     printf("Set loaded image for device %s type %d (%s)\n", dev->name, dev->devtype, GetDeviceTypeName(dev->devtype));
@@ -306,11 +334,6 @@ static int DoGetSharedDirFile(int argc, const char *argv[])
         return 16;
     }
 
-    if (sscanf(argv[1], "%d", &fileindex) != 1 || fileindex < 0 || fileindex > 100) {
-        fprintf(stderr, "Illegal file index, please use an index returned from the 'lsdir' command.\n");
-        return 17;
-    }
-    
     if (argc >= 3) {
         strncpy(outfn, argv[2], sizeof(outfn));
         printf("specified output filename: %s\n", outfn);
@@ -324,6 +347,12 @@ static int DoGetSharedDirFile(int argc, const char *argv[])
         return 1;
     }
 
+    // Attempt to parse the file index to retrieve
+    if (sscanf(argv[1], "%d", &fileindex) != 1 || fileindex < 0 || fileindex >= files.entries()) {
+        // If failed, attempt to search for it as a filename
+        fileindex = FindFilenameInList(files, argv[1]);
+    }
+
     const ToolboxFileEntry *tfe = NULL;
     for (int i = 0; i < files.entries(); i++) {
         if (files[i].index == fileindex) {
@@ -332,7 +361,7 @@ static int DoGetSharedDirFile(int argc, const char *argv[])
         }
     }
     if (tfe == NULL) {
-        fprintf(stderr, "Illegal file index, please use an index returned from the 'lsdir' command.\n");
+        fprintf(stderr, "Illegal file index or name, please use one returned from the 'lsdir' command.\n");
         return 17;
     }
 
@@ -575,10 +604,10 @@ static void PrintHelp(void)
         "  info                    List all available SCSI adapters and devices.\n"
         "  debug <dev> [flag]      Show or set device firmware debug flag.\n"
         "  lsimg <dev>             List available images for the given device.\n"
-        "  setimg <dev> <idx>      Change the mounted image in the given device, to\n"
-        "                          the image with the given index in the image list.\n"
+        "  setimg <dev> <img>      Change the mounted image in the given device, to\n"
+        "                          the image with the given index or filename.\n"
         "  lsdir <dev>             List shared directory for the given decice.\n"
-        "  get <dev> <idx> [name]  Download a file from the shared directory.\n"
+        "  get <dev> <file> [name] Download a file from the shared directory.\n"
         "  put <dev> <filename>    Upload a file to the shared directory.\n"
         "\n"
         "Please see the documentation for more information about supported\n"
