@@ -24,8 +24,8 @@
 #include "../include/estb.h"
 
 
-WCValOrderedVector<Adapter> _adapters;
-WCValOrderedVector<Device> _devices;
+WCValOrderedVector<Adapter> _adapters(0, 1);
+WCValOrderedVector<Device> _devices(0, 8);
 
 
 static int GetHostAdapterInfo(void)
@@ -50,38 +50,38 @@ static int GetHostAdapterInfo(void)
                 return 0;
         }
 
-        num_adapters = host_adapter_info.HA_Count;
-        if (_adapters.isEmpty()) {
-            _adapters.resize(num_adapters);
-            //_devices.reserve(MAX_SCSI_LUNS * num_adapters);
+        if (num_adapters == 0) {
+            num_adapters = host_adapter_info.HA_Count;
         }
 
         /* fill Adapter struct */
-        Adapter *ad = &_adapters[adapter_id];
-        memset(ad, 0, sizeof(*ad));
-        ad->ha_id = host_adapter_info.SRB_HaId;
-        ad->scsi_id = host_adapter_info.HA_SCSI_ID;
-        strncpy(ad->manager_id,
+        Adapter ad;
+        memset(&ad, 0, sizeof(ad));
+        ad.ha_id = host_adapter_info.SRB_HaId;
+        ad.scsi_id = host_adapter_info.HA_SCSI_ID;
+        strncpy(ad.manager_id,
             (char *)host_adapter_info.HA_ManagerId,
             sizeof(host_adapter_info.HA_ManagerId));
-        strncpy(ad->adapter_id,
+        strncpy(ad.adapter_id,
             (char *)host_adapter_info.HA_Identifier,
             sizeof(host_adapter_info.HA_Identifier));
-        ad->alignment_mask =
+        ad.alignment_mask =
             host_adapter_info.HA_Unique[1] | host_adapter_info.HA_Unique[0] << 8;
-        ad->support_residual_byte_count_reporting =
+        ad.support_residual_byte_count_reporting =
             (host_adapter_info.HA_Unique[2] & 2) != 0;
-        ad->max_targets =
+        ad.max_targets =
             host_adapter_info.HA_Unique[3];
-        ad->max_transfer_length =
+        ad.max_transfer_length =
             (unsigned long)host_adapter_info.HA_Unique[4]       |
             (unsigned long)host_adapter_info.HA_Unique[5] << 8  |
             (unsigned long)host_adapter_info.HA_Unique[6] << 16 |
             (unsigned long)host_adapter_info.HA_Unique[7] << 24 ;
 
         /* some defaults if the adapter does not supply */
-        if (ad->max_targets == 0) ad->max_targets = 8;
-        if (ad->max_transfer_length == 0) ad->max_transfer_length = 0x4000; /* 16k */
+        if (ad.max_targets == 0) ad.max_targets = 8;
+        if (ad.max_transfer_length == 0) ad.max_transfer_length = 0x4000; /* 16k */
+
+        _adapters.append(ad);
     } while (++adapter_id < num_adapters);
 
     return num_adapters;
@@ -125,6 +125,17 @@ static int GetAdapterDeviceInfo(int adapter_id)
     int devtype = -1;
     int devsonadapter = 0;
 
+    /*
+    printf("Adapter %d: id=%d manager=%s identifier=%s scsi_id=%d max_targets=%d\n",
+        adapter_id,
+        _adapters[adapter_id].ha_id,
+        _adapters[adapter_id].manager_id,
+        _adapters[adapter_id].adapter_id,
+        _adapters[adapter_id].scsi_id,
+        _adapters[adapter_id].max_targets
+    );
+    */
+
     for (target_id = 0; target_id < _adapters[adapter_id].max_targets; target_id++) {
         // Do not try to enumerate the host adapter itself
         if (target_id == _adapters[adapter_id].scsi_id) continue;
@@ -155,8 +166,6 @@ static int GetAdapterDeviceInfo(int adapter_id)
 
 int InitSCSI()
 {
-    int id;
-    
     if (!InitASPI()) {
         fprintf(stderr, "Could not obtain ASPI services, check your driver is installed.\n");
         return 255;
@@ -167,7 +176,7 @@ int InitSCSI()
         return 254;
     }
 
-    for (id = 0; id < _adapters.entries(); id++) {
+    for (int id = 0; id < _adapters.entries(); id++) {
         GetAdapterDeviceInfo(id);
     }
 
