@@ -51,12 +51,13 @@ bool ToolboxGetImageList(const Device &dev, WCValOrderedVector<ToolboxFileEntry>
     size_t count = cmd->data_buf[0];
     images.clear();
     if (count < 1) return false;
+    if (count > MAX_FILE_LISTING_FILES) count = MAX_FILE_LISTING_FILES;
     //images.reserve(count);
 
     delete cmd;
 
     // Send TOOLBOX_LIST_CDS command
-    const int BUFSIZE = MAX_FILE_LISTING_FILES * sizeof(ToolboxFileEntry);
+    const int BUFSIZE = count * sizeof(ToolboxFileEntry);
     cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return false;
 
@@ -140,12 +141,13 @@ bool ToolboxGetSharedDirList(const Device &dev, WCValOrderedVector<ToolboxFileEn
     size_t count = cmd->data_buf[0];
     images.clear();
     if (count < 1) return false;
+    if (count > MAX_FILE_LISTING_FILES) count = MAX_FILE_LISTING_FILES;
     //images.reserve(count);
 
     delete cmd;
 
     // Send TOOLBOX_LIST_FILES command
-    const int BUFSIZE = MAX_FILE_LISTING_FILES * sizeof(ToolboxFileEntry);
+    const int BUFSIZE = count * sizeof(ToolboxFileEntry);
     cmd = dev.PrepareCommand(10, BUFSIZE, SRB_DIR_IN | SRB_DIR_SCSI);
     if (cmd == NULL) return false;
 
