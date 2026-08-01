@@ -131,7 +131,8 @@ scsitb setimg <device> <filename>
 
 This requests that a different disk image is mounted on the emulated device.
 Either use the image index given by the `lsimg` command, or specify a filename
-directly.
+directly. Partial names will be matched based on the first item encountered that
+starts with the given filename.
 
 ```
 C:\> scsitb setimg 1 ezscsi4.iso

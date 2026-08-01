@@ -165,7 +165,8 @@ static int FindFilenameInList(const WCValOrderedVector<ToolboxFileEntry> &files,
 {
     for (int i = 0; i < files.entries(); i++) {
         const ToolboxFileEntry &tfe = files[i];
-        if (strncasecmp(tfe.name, searchname, sizeof(tfe.name) - 1) == 0) {
+        // Match on first instance of a filename that starts with the search string.
+        if (strncasecmp(tfe.name, searchname, strlen(searchname)) == 0) {
             printf("Selected file %d: %s\n", tfe.index, tfe.name);
             return tfe.index;
         }
@@ -605,7 +606,7 @@ static void PrintHelp(void)
         "  debug <dev> [flag]      Show or set device firmware debug flag.\n"
         "  lsimg <dev>             List available images for the given device.\n"
         "  setimg <dev> <img>      Change the mounted image in the given device, to\n"
-        "                          the image with the given index or filename.\n"
+        "                          the image with the given index or partial filename.\n"
         "  lsdir <dev>             List shared directory for the given decice.\n"
         "  get <dev> <file> [name] Download a file from the shared directory.\n"
         "  put <dev> <filename>    Upload a file to the shared directory.\n"
