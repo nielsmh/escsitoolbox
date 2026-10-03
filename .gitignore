@@ -7,4 +7,5 @@
 *.sym
 *.res
 *.re@
+*.exe
 .vscode/
